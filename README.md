@@ -4,7 +4,7 @@ This project visualizes the global distribution of Bitcoin nodes by creating an 
 
 ## Setup
 
-Initially, you need to run these two commands:
+Initially, run these two commands:
 
 ```bash
 npm install
