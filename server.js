@@ -6,7 +6,8 @@ const BITCOIN_CLI_CMD = process.env.BITCOIN_CLI_PATH || 'bitcoin-cli';
 
 async function getNodesFromBitcoinCore() {
     try {
-        console.log('Querying Bitcoin Core node for peer information...');
+        const timestamp = new Date().toISOString();
+        console.log(`[${timestamp}] Querying Bitcoin Core node using: ${BITCOIN_CLI_CMD} getpeerinfo`);
         
         const { stdout, stderr } = await execAsync(`${BITCOIN_CLI_CMD} getpeerinfo`);
         
@@ -20,7 +21,7 @@ async function getNodesFromBitcoinCore() {
             throw new Error('Invalid response from bitcoin-cli getpeerinfo');
         }
         
-        console.log(`Found ${peerInfo.length} connected peers`);
+        console.log(`[${new Date().toISOString()}] Found ${peerInfo.length} connected peers from Bitcoin Core`);
         
         const nodes = {};
         const seenIPs = new Set();
@@ -64,7 +65,7 @@ async function getNodesFromBitcoinCore() {
             seenIPs.add(ip);
         });
         
-        console.log(`Extracted ${Object.keys(nodes).length} unique IPv4 nodes`);
+        console.log(`[${new Date().toISOString()}] Extracted ${Object.keys(nodes).length} unique IPv4 nodes at this moment`);
         return nodes;
         
     } catch (error) {
@@ -89,25 +90,17 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
-let cachedNodes = null;
-let lastFetch = 0;
-const CACHE_DURATION = 30000;
-
 app.get('/api/nodes', async (req, res) => {
     try {
-        const now = Date.now();
-        
-        if (cachedNodes && (now - lastFetch) < CACHE_DURATION) {
-            return res.json({ nodes: cachedNodes });
-        }
-        
-        console.log('Fetching nodes from Bitcoin Core...');
+        const requestTime = new Date().toISOString();
+        console.log(`[${requestTime}] API Request: Fetching live nodes from Bitcoin Core at this exact moment...`);
         const nodes = await getNodesFromBitcoinCore();
         
-        cachedNodes = nodes;
-        lastFetch = now;
-        
-        res.json({ nodes });
+        res.json({ 
+            nodes,
+            timestamp: requestTime,
+            source: 'bitcoin-cli getpeerinfo'
+        });
     } catch (error) {
         console.error('Error discovering nodes:', error);
         res.status(500).json({ error: error.message });
@@ -120,6 +113,8 @@ app.get('/health', (req, res) => {
 
 app.get('/api/ips', async (req, res) => {
     try {
+        const requestTime = new Date().toISOString();
+        console.log(`[${requestTime}] API Request: Fetching live IP addresses from Bitcoin Core at this exact moment...`);
         const nodes = await getNodesFromBitcoinCore();
         const ips = Object.keys(nodes).map(key => {
             const lastColon = key.lastIndexOf(':');
@@ -128,7 +123,9 @@ app.get('/api/ips', async (req, res) => {
         res.json({ 
             total: ips.length,
             ips: ips.sort(),
-            note: 'These IPs were retrieved using bitcoin-cli getpeerinfo from your local Bitcoin Core node'
+            timestamp: requestTime,
+            source: 'bitcoin-cli getpeerinfo',
+            note: 'These IPs were retrieved in real-time using bitcoin-cli getpeerinfo from your local Bitcoin Core node at the moment of this request'
         });
     } catch (error) {
         console.error('Error getting IPs:', error);
