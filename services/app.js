@@ -1,4 +1,4 @@
-const P2P_API_URL = "http://localhost:3000/api/nodes";
+const NODES_JSON_URL = "nodes.json";
 const GEOIP_URL = "http://ip-api.com/json/{ip}?fields=status,lat,lon";
 const MAX_IPS = 800;
 const UPDATE_INTERVAL = 10000;
@@ -93,8 +93,8 @@ function isIPv4(host) {
 
 async function fetchSnapshotNodes() {
     try {
-        updateStatus("Crawling Bitcoin P2P network...", "info");
-        const response = await fetch(P2P_API_URL);
+        updateStatus("Loading Bitcoin nodes from nodes.json...", "info");
+        const response = await fetch(NODES_JSON_URL);
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
@@ -108,8 +108,8 @@ async function fetchSnapshotNodes() {
             return nodes;
         }
     } catch (error) {
-        console.warn("P2P crawler failed:", error);
-        updateStatus("Bitcoin network crawl unavailable. Make sure server is running. Using demo data.", "warning");
+        console.warn("Failed to load nodes.json:", error);
+        updateStatus("nodes.json not found. Run the Python crawler first: python3 services/bitcoin_crawler.py. Using demo data.", "warning");
     }
     
     updateStatus("Using demo data.", "warning");

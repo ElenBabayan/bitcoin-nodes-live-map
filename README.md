@@ -6,29 +6,32 @@ This project visualizes the global distribution of Bitcoin nodes by creating an 
 
 ### Prerequisites
 
-1. **Node.js** (for the web server)
-2. **Python 3** (for the Bitcoin crawler)
+1. **Python 3** (for the Bitcoin crawler)
+2. A web browser (to view the visualization)
 
 ### Installation
 
-1. Install Node.js dependencies:
-```bash
-npm install
-```
-
-2. **No additional Python packages required!** The Python crawler uses only the standard library (similar to bitnodes-crawler approach).
+**No additional Python packages required!** The Python crawler uses only the standard library (similar to bitnodes-crawler approach).
 
 **No Bitcoin Core installation required!** The crawler connects directly to the Bitcoin network.
 
 ## Running the Project
 
-Simply run:
-
+1. **Run the Python crawler** to discover Bitcoin nodes:
 ```bash
-npm start
+python3 services/bitcoin_crawler.py --max-nodes 1000
 ```
 
-Then open the map visualization in your browser.
+This will create a `nodes.json` file in the project root with all discovered nodes.
+
+2. **Open the visualization** in your browser:
+   - Option A: Use Python's built-in HTTP server:
+     ```bash
+     python3 -m http.server 8000
+     ```
+     Then open: `http://localhost:8000/components/bitcoin-nodes-live-map/bitcoin_nodes_live_map.html`
+   
+   - Option B: Open the HTML file directly (some browsers may have CORS restrictions)
 
 ## How It Works
 
@@ -45,10 +48,10 @@ The Python crawler directly implements the Bitcoin P2P protocol (similar to the 
 
 ## Configuration
 
-- `P2P_API_URL` in `app.js`: Backend API endpoint (default: "http://localhost:3000/api/nodes")
+- `NODES_JSON_URL` in `app.js`: Path to nodes.json file (default: "nodes.json")
 - `MAX_IPS` in `app.js`: Number of nodes to geolocate (default: 800)
 - `UPDATE_INTERVAL` in `app.js`: Update frequency in milliseconds (default: 10000)
-- `MAX_NODES` environment variable: Maximum nodes to discover during crawl (default: 1000)
+- `--max-nodes` argument: Maximum nodes to discover during crawl (default: 1000)
 
 ## Technical Details
 
@@ -68,6 +71,7 @@ The advantage over `bitcoin-cli getpeerinfo` is that it discovers **all reachabl
 
 ### Python Configuration
 
-- Default Python command: `python3` (set via `PYTHON_CMD` environment variable)
 - The crawler script is located at: `services/bitcoin_crawler.py`
-- You can run it directly: `python3 services/bitcoin_crawler.py --max-nodes 1000`
+- Run it with: `python3 services/bitcoin_crawler.py --max-nodes 1000`
+- Output is written to `nodes.json` in the project root
+- The script also outputs JSON to stdout for programmatic use

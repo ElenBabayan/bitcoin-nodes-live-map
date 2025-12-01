@@ -1,16 +1,4 @@
 #!/usr/bin/env python3
-"""
-Bitcoin P2P Network Crawler
-Direct implementation of Bitcoin P2P protocol (similar to bitnodes-crawler)
-
-This crawler discovers Bitcoin nodes by:
-1. Starting with DNS seeds (hardcoded Bitcoin DNS seeds)
-2. Connecting to nodes and performing Bitcoin P2P handshake
-3. Requesting peer addresses using getaddr message
-4. Recursively crawling discovered peers
-
-Based on Bitcoin protocol version 70001+
-"""
 
 import sys
 import json
@@ -24,7 +12,6 @@ from threading import Lock, Event
 import signal
 import random
 
-# Bitcoin DNS seeds (official Bitcoin Core seeds)
 DNS_SEEDS = [
     'seed.bitcoin.sipa.be',
     'dnsseed.bluematt.me',
@@ -38,11 +25,11 @@ DNS_SEEDS = [
 ]
 
 BITCOIN_PORT = 8333
-MAGIC_BYTES = b'\xf9\xbe\xb4\xd9'  # Bitcoin mainnet magic bytes
+MAGIC_BYTES = b'\xf9\xbe\xb4\xd9'
 PROTOCOL_VERSION = 70015
 MAX_NODES = 1000
-CRAWL_TIMEOUT = 30  # seconds
-CONNECTION_TIMEOUT = 5  # seconds
+CRAWL_TIMEOUT = 30
+CONNECTION_TIMEOUT = 5
 
 class BitcoinCrawler:
     def __init__(self, max_nodes=MAX_NODES, timeout=CRAWL_TIMEOUT):
@@ -61,7 +48,6 @@ class BitcoinCrawler:
             try:
                 ip_addresses = socket.gethostbyname_ex(seed)[2]
                 for ip in ip_addresses:
-                    # Filter IPv4 only
                     try:
                         socket.inet_aton(ip)
                         nodes.append((ip, BITCOIN_PORT))
@@ -76,7 +62,6 @@ class BitcoinCrawler:
         command_bytes = command.encode('ascii').ljust(12, b'\x00')
         payload_length = struct.pack('<I', len(payload))
         
-        # Checksum: double SHA256 of payload (first 4 bytes)
         checksum = hashlib.sha256(hashlib.sha256(payload).digest()).digest()[:4]
         
         return MAGIC_BYTES + command_bytes + payload_length + checksum + payload
@@ -84,17 +69,15 @@ class BitcoinCrawler:
     def create_version_message(self, remote_ip, remote_port):
         """Create version message"""
         version = struct.pack('<I', PROTOCOL_VERSION)
-        services = struct.pack('<Q', 1)  # NODE_NETWORK
+        services = struct.pack('<Q', 1)
         timestamp = struct.pack('<Q', int(time.time()))
         
-        # addr_recv
-        addr_recv = struct.pack('<I', 0)  # IPv4
+        addr_recv = struct.pack('<I', 0)
         addr_recv += struct.pack('>H', remote_port)
-        addr_recv += struct.pack('<Q', 1)  # Services
+        addr_recv += struct.pack('<Q', 1)
         addr_recv += b'\x00' * 12
         addr_recv += socket.inet_aton(remote_ip)
         
-        # addr_from (empty)
         addr_from = struct.pack('<I', 0)
         addr_from += struct.pack('>H', 0)
         addr_from += struct.pack('<Q', 0)
@@ -137,7 +120,6 @@ class BitcoinCrawler:
         
         payload = data[24:24 + payload_length]
         
-        # Verify checksum
         calculated_checksum = hashlib.sha256(hashlib.sha256(payload).digest()).digest()[:4]
         if calculated_checksum != checksum:
             return None
@@ -173,7 +155,7 @@ class BitcoinCrawler:
             return addresses
         
         count, offset = self.read_varint(payload, 0)
-        count = min(count, 1000)  # Limit to 1000 addresses
+        count = min(count, 1000)
         
         for i in range(count):
             if offset + 30 > len(payload):
@@ -183,7 +165,6 @@ class BitcoinCrawler:
             services = struct.unpack('<Q', payload[offset+4:offset+12])[0]
             ip_bytes = payload[offset+12:offset+28]
             
-            # Check if IPv4 (first 12 bytes should be 0, then 0x0000FFFF)
             is_ipv4 = (ip_bytes[0:12] == b'\x00' * 12 and 
                       ip_bytes[12:14] == b'\x00\x00' and
                       ip_bytes[14:16] == b'\xff\xff')
@@ -192,7 +173,6 @@ class BitcoinCrawler:
                 ip = socket.inet_ntoa(ip_bytes[16:20])
                 port = struct.unpack('>H', payload[offset+28:offset+30])[0]
                 
-                # Validate IP
                 try:
                     socket.inet_aton(ip)
                     addresses.append({'ip': ip, 'port': port, 'timestamp': timestamp})
@@ -216,7 +196,6 @@ class BitcoinCrawler:
             sock.settimeout(CONNECTION_TIMEOUT)
             sock.connect((ip, port))
             
-            # Send version message
             version_msg = self.create_version_message(ip, port)
             sock.sendall(version_msg)
             
@@ -238,7 +217,6 @@ class BitcoinCrawler:
                         msg = self.parse_message(message_buffer)
                         
                         if not msg:
-                            # Try to find magic bytes
                             magic_index = message_buffer.find(MAGIC_BYTES, 1)
                             if magic_index > 0:
                                 message_buffer = message_buffer[magic_index:]
@@ -261,7 +239,6 @@ class BitcoinCrawler:
                                 peers = self.parse_addr_message(msg['payload'])
                                 break
                         
-                        # Remove processed message
                         msg_length = 24 + len(msg['payload'])
                         message_buffer = message_buffer[msg_length:]
                     
@@ -289,7 +266,6 @@ class BitcoinCrawler:
         print(f"[Crawler] Starting Bitcoin network crawl (max {self.max_nodes} nodes)...", file=sys.stderr)
         start_time = time.time()
         
-        # Get initial nodes from DNS seeds
         print("[Crawler] Getting initial nodes from DNS seeds...", file=sys.stderr)
         seed_nodes = self.get_nodes_from_dns_seeds()
         print(f"[Crawler] Found {len(seed_nodes)} seed nodes", file=sys.stderr)
@@ -297,7 +273,6 @@ class BitcoinCrawler:
         for ip, port in seed_nodes:
             self.to_crawl.append((ip, port))
         
-        # Crawl nodes
         crawl_count = 0
         while (self.to_crawl and 
                len(self.discovered_nodes) < self.max_nodes and 
@@ -326,7 +301,6 @@ class BitcoinCrawler:
                     if node_key not in self.discovered_nodes:
                         self.discovered_nodes[node_key] = {"version": "70015"}
                 
-                # Add discovered peers to crawl queue
                 if result['peers']:
                     for peer in result['peers']:
                         peer_key = f"{peer['ip']}:{peer['port']}"
@@ -336,7 +310,6 @@ class BitcoinCrawler:
                             len(self.discovered_nodes) < self.max_nodes):
                             self.to_crawl.append((peer['ip'], peer['port']))
             
-            # Small delay
             time.sleep(0.1)
         
         elapsed = time.time() - start_time
@@ -367,12 +340,21 @@ def main():
     try:
         nodes = crawler.crawl_network()
         
-        # Output as JSON
-        print(json.dumps({
+        output_data = {
             "nodes": nodes,
             "count": len(nodes),
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S")
-        }))
+        }
+        
+        print(json.dumps(output_data))
+        
+        import os
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(script_dir)
+        nodes_file = os.path.join(project_root, 'nodes.json')
+        with open(nodes_file, 'w') as f:
+            json.dump(output_data, f, indent=2)
+        print(f"[Crawler] Nodes data written to {nodes_file}", file=sys.stderr)
         
     except KeyboardInterrupt:
         print("\n[Crawler] Interrupted by user", file=sys.stderr)

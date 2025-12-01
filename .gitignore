@@ -11,6 +11,11 @@ ENV/
 
 # Generated files
 bitcoin_nodes_map.html
+nodes.json
+
+# Node.js (no longer needed)
+node_modules/
+package-lock.json
 
 # IDE
 .vscode/
