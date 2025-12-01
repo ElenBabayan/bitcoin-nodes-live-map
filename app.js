@@ -82,7 +82,6 @@ function initMap() {
     }
     
     fetchAndUpdate();
-    setInterval(fetchAndUpdate, UPDATE_INTERVAL);
 }
 
 function isIPv4(host) {
