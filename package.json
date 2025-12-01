@@ -2,10 +2,10 @@
   "name": "bitcoin-node-map",
   "version": "1.0.0",
   "description": "Bitcoin node discovery and visualization using direct P2P protocol",
-  "main": "server.js",
+  "main": "services/server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node services/server.js",
+    "dev": "node services/server.js"
   },
   "keywords": [
     "bitcoin",
