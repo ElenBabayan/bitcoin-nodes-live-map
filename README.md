@@ -1,6 +1,6 @@
 # Bitcoin Node Heatmap Visualization
 
-This project visualizes the global distribution of Bitcoin nodes by creating an interactive heatmap. It uses `bitcoin-cli` to query an actual Bitcoin Core node running on your machine to retrieve the IP addresses of all connected peer nodes. The backend server executes `bitcoin-cli getpeerinfo` to get real-time peer information from local `bitcoind` instance.
+This project visualizes the global distribution of Bitcoin nodes by creating an interactive heatmap. It uses `bitcoin-cli` to query an actual Bitcoin Core node running on machine to retrieve the IP addresses of all connected peer nodes. The backend server executes `bitcoin-cli getpeerinfo` to get real-time peer information from local `bitcoind` instance.
 
 ## Setup
 
