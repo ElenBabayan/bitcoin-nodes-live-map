@@ -1,4 +1,4 @@
-const NODES_JSON_URL = "nodes.json";
+const NODES_JSON_URL = "/nodes.json";
 const GEOIP_URL = "http://ip-api.com/json/{ip}?fields=status,lat,lon";
 const MAX_IPS = 800;
 const UPDATE_INTERVAL = 10000;
