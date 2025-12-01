@@ -27,7 +27,7 @@ npm start
 
 ## How It Works
 
-- **Backend uses `bitcoin-cli getpeerinfo`** to query your local Bitcoin Core node (`bitcoind`)
+- **Backend uses `bitcoin-cli getpeerinfo`** to query local Bitcoin Core node (`bitcoind`)
 - Extracts IPv4 addresses from all connected peers
 - Frontend geolocates IPs and displays them on an interactive Leaflet map with heatmap overlay
 - Auto-updates every 10 seconds (optional - you can take a single screenshot instead)
