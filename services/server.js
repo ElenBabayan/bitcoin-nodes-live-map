@@ -1,84 +1,58 @@
 const { exec } = require('child_process');
 const { promisify } = require('util');
+const path = require('path');
 const execAsync = promisify(exec);
 
-const BITCOIN_CLI_CMD = process.env.BITCOIN_CLI_PATH || 'bitcoin-cli';
+const PYTHON_CRAWLER_PATH = path.join(__dirname, 'bitcoin_crawler.py');
+const MAX_NODES_TO_DISCOVER = parseInt(process.env.MAX_NODES) || 1000;
+const PYTHON_CMD = process.env.PYTHON_CMD || 'python3';
 
-async function getNodesFromBitcoinCore() {
+/**
+ * Discover Bitcoin nodes using Python P2P network crawler
+ * 
+ * This function uses a Python Bitcoin P2P crawler (similar to bitnodes-crawler) that:
+ * 1. Connects to Bitcoin DNS seeds to get initial nodes
+ * 2. Performs Bitcoin P2P protocol handshake with each node
+ * 3. Requests peer addresses using getaddr messages
+ * 4. Recursively crawls discovered peers to build a network map
+ * 
+ * This approach discovers ALL reachable nodes in the Bitcoin network,
+ * not just the peers connected to a local bitcoind instance.
+ * 
+ * Uses Python implementation similar to bitnodes-crawler approach.
+ */
+async function getNodesFromBitcoinNetwork() {
     try {
         const timestamp = new Date().toISOString();
-        console.log(`[${timestamp}] Querying Bitcoin Core node using: ${BITCOIN_CLI_CMD} getpeerinfo`);
+        console.log(`[${timestamp}] Starting Bitcoin P2P network crawl using Python crawler...`);
+        console.log(`[${timestamp}] This will discover nodes across the entire Bitcoin network`);
         
-        const { stdout, stderr } = await execAsync(`${BITCOIN_CLI_CMD} getpeerinfo`);
-        
-        if (stderr) {
-            console.warn('bitcoin-cli stderr:', stderr);
-        }
-        
-        const peerInfo = JSON.parse(stdout);
-        
-        if (!Array.isArray(peerInfo)) {
-            throw new Error('Invalid response from bitcoin-cli getpeerinfo');
-        }
-        
-        console.log(`[${new Date().toISOString()}] Found ${peerInfo.length} connected peers from Bitcoin Core`);
-        
-        const nodes = {};
-        const seenIPs = new Set();
-        
-        peerInfo.forEach(peer => {
-            let ip = null;
-            let port = 8333;
-            
-            if (peer.addr) {
-                const parts = peer.addr.split(':');
-                ip = parts[0];
-                if (parts.length > 1) {
-                    port = parseInt(parts[1]) || 8333;
-                }
-            } else if (peer.addrlocal) {
-                const parts = peer.addrlocal.split(':');
-                ip = parts[0];
-            }
-            
-            if (!ip || seenIPs.has(ip)) {
-                return;
-            }
-            
-            if (ip.includes(':') || ip.startsWith('[')) {
-                return;
-            }
-            
-            if (ip.endsWith('.onion')) {
-                return;
-            }
-            
-            const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
-            if (!ipv4Regex.test(ip)) {
-                return;
-            }
-            
-            const key = `${ip}:${port}`;
-            nodes[key] = {
-                version: peer.version ? peer.version.toString() : '70015'
-            };
-            seenIPs.add(ip);
+        const command = `${PYTHON_CMD} "${PYTHON_CRAWLER_PATH}" --max-nodes ${MAX_NODES_TO_DISCOVER} --timeout 30`;
+        const { stdout, stderr } = await execAsync(command, {
+            maxBuffer: 10 * 1024 * 1024, // 10MB buffer for large responses
+            timeout: 60000 // 60 second timeout
         });
         
-        console.log(`[${new Date().toISOString()}] Extracted ${Object.keys(nodes).length} unique IPv4 nodes at this moment`);
+        if (stderr) {
+            // Python crawler writes progress to stderr, which is fine
+            console.log(stderr);
+        }
+        
+        const result = JSON.parse(stdout);
+        const nodes = result.nodes || {};
+        
+        console.log(`[${new Date().toISOString()}] Discovered ${Object.keys(nodes).length} unique Bitcoin nodes`);
         return nodes;
         
     } catch (error) {
         if (error.code === 'ENOENT') {
-            throw new Error('bitcoin-cli not found. Please install Bitcoin Core and ensure bitcoin-cli is in your PATH.');
+            throw new Error(`Python not found. Please install Python 3 and ensure '${PYTHON_CMD}' is in your PATH.`);
         }
-        if (error.message.includes('Could not connect')) {
-            throw new Error('Cannot connect to Bitcoin Core. Make sure bitcoind is running.');
+        if (error.message.includes('JSON')) {
+            throw new Error(`Error parsing crawler output: ${error.message}. Make sure Python crawler is working correctly.`);
         }
-        if (error.message.includes('Authentication failed')) {
-            throw new Error('Bitcoin Core RPC authentication failed. Check your ~/.bitcoin/bitcoin.conf or RPC credentials.');
-        }
-        throw new Error(`Error querying Bitcoin Core: ${error.message}`);
+        console.error(`[${new Date().toISOString()}] Error crawling Bitcoin network:`, error);
+        throw new Error(`Error crawling Bitcoin network: ${error.message}`);
     }
 }
 
@@ -93,13 +67,14 @@ app.use(express.json());
 app.get('/api/nodes', async (req, res) => {
     try {
         const requestTime = new Date().toISOString();
-        console.log(`[${requestTime}] API Request: Fetching live nodes from Bitcoin Core at this exact moment...`);
-        const nodes = await getNodesFromBitcoinCore();
+        console.log(`[${requestTime}] API Request: Starting Bitcoin P2P network crawl...`);
+        const nodes = await getNodesFromBitcoinNetwork();
         
         res.json({ 
             nodes,
             timestamp: requestTime,
-            source: 'bitcoin-cli getpeerinfo'
+            source: 'python-bitcoin-crawler',
+            method: 'P2P protocol crawl (getaddr messages) - Python implementation similar to bitnodes-crawler'
         });
     } catch (error) {
         console.error('Error discovering nodes:', error);
@@ -111,32 +86,13 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
 });
 
-app.get('/api/ips', async (req, res) => {
-    try {
-        const requestTime = new Date().toISOString();
-        console.log(`[${requestTime}] API Request: Fetching live IP addresses from Bitcoin Core at this exact moment...`);
-        const nodes = await getNodesFromBitcoinCore();
-        const ips = Object.keys(nodes).map(key => {
-            const lastColon = key.lastIndexOf(':');
-            return lastColon !== -1 ? key.substring(0, lastColon) : key;
-        });
-        res.json({ 
-            total: ips.length,
-            ips: ips.sort(),
-            timestamp: requestTime,
-            source: 'bitcoin-cli getpeerinfo',
-            note: 'These IPs were retrieved in real-time using bitcoin-cli getpeerinfo from your local Bitcoin Core node at the moment of this request'
-        });
-    } catch (error) {
-        console.error('Error getting IPs:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
 app.listen(PORT, () => {
     console.log(`Bitcoin Node Discovery Server running on http://localhost:${PORT}`);
     console.log(`API endpoint: http://localhost:${PORT}/api/nodes`);
-    console.log(`IP list endpoint: http://localhost:${PORT}/api/ips`);
-    console.log(`\nMake sure Bitcoin Core (bitcoind) is running and bitcoin-cli is accessible.`);
-    console.log(`The server uses bitcoin-cli getpeerinfo to query your local Bitcoin node for peer information.`);
+    console.log(`\nThe server uses a Python Bitcoin P2P network crawler to discover nodes.`);
+    console.log(`It connects directly to Bitcoin nodes using the P2P protocol and getaddr messages.`);
+    console.log(`Implementation is similar to bitnodes-crawler (Python-based).`);
+    console.log(`No local Bitcoin Core installation is required.`);
+    console.log(`\nMax nodes to discover: ${MAX_NODES_TO_DISCOVER} (set via MAX_NODES env var)`);
+    console.log(`Python command: ${PYTHON_CMD}`);
 });

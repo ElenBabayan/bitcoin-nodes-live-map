@@ -93,7 +93,7 @@ function isIPv4(host) {
 
 async function fetchSnapshotNodes() {
     try {
-        updateStatus("Getting nodes from Bitcoin Core node...", "info");
+        updateStatus("Crawling Bitcoin P2P network...", "info");
         const response = await fetch(P2P_API_URL);
         
         if (!response.ok) {
@@ -108,8 +108,8 @@ async function fetchSnapshotNodes() {
             return nodes;
         }
     } catch (error) {
-        console.warn("P2P discovery failed:", error);
-        updateStatus("Bitcoin Core unavailable. Make sure bitcoind is running and server is running. Using demo data.", "warning");
+        console.warn("P2P crawler failed:", error);
+        updateStatus("Bitcoin network crawl unavailable. Make sure server is running. Using demo data.", "warning");
     }
     
     updateStatus("Using demo data.", "warning");
@@ -274,7 +274,7 @@ async function fetchAndUpdate() {
     updateCount++;
     
     try {
-        updateStatus("Fetching live Bitcoin node data...", "info");
+        updateStatus("Crawling Bitcoin P2P network for nodes...", "info");
         
         const nodes = await fetchSnapshotNodes();
         
