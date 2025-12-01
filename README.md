@@ -30,7 +30,6 @@ npm start
 - **Backend uses `bitcoin-cli getpeerinfo`** to query local Bitcoin Core node (`bitcoind`)
 - Extracts IPv4 addresses from all connected peers
 - Frontend geolocates IPs and displays them on an interactive Leaflet map with heatmap overlay
-- Auto-updates every 10 seconds (optional - you can take a single screenshot instead)
 
 ## Getting IP Addresses for Screenshot
 
@@ -38,7 +37,7 @@ To get a simple list of IP addresses retrieved via `bitcoin-cli`:
 
 1. Start the server: `npm start`
 2. Visit: `http://localhost:3000/api/ips`
-3. This will show all IP addresses retrieved from your Bitcoin node using `bitcoin-cli getpeerinfo`
+3. This will show all IP addresses retrieved from Bitcoin node using `bitcoin-cli getpeerinfo`
 
 ## Configuration
 
