@@ -1,52 +1,29 @@
 # Bitcoin Node Heatmap Visualization
 
-Visualizes the global distribution of Bitcoin nodes by creating an interactive heatmap. 
+This project visualizes the global distribution of Bitcoin nodes by creating an interactive heatmap. It uses `bitcoin-cli` to query an actual Bitcoin Core node running on your machine to retrieve the IP addresses of all connected peer nodes. The backend server executes `bitcoin-cli getpeerinfo` to get real-time peer information from your local `bitcoind` instance.
 
-**This project uses `bitcoin-cli` to query an actual Bitcoin Core node** running on your machine to retrieve the IP addresses of all connected peer nodes. The backend server executes `bitcoin-cli getpeerinfo` to get real-time peer information from your local `bitcoind` instance.
+## Setup
 
-## Requirements
+Initially, you need to run these two commands:
 
-- **Bitcoin Core** installed and running (`bitcoind`)
-- **Node.js** 14.0 or higher
-- Internet connection (for geolocation)
-
-## Installing Bitcoin Core
-
-### macOS (using Homebrew):
 ```bash
+npm install
 brew install bitcoin
 ```
 
-### macOS (Manual):
-1. Download from: https://bitcoincore.org/en/download/
-2. Extract and move `bitcoin-cli` to your PATH or use full path
+## Running the Project
 
-### After Installation:
-1. Start Bitcoin Core: `bitcoind`
-2. Wait for initial sync (this can take hours/days for full sync)
-3. Once connected to peers, you can test with: `bitcoin-cli getpeerinfo`
+After setup, run these two commands in **2 different terminals**:
 
-## How to Reproduce
+**Terminal 1:**
+```bash
+bitcoind
+```
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-2. **Start Bitcoin Core:**
-   ```bash
-   bitcoind
-   ```
-   Wait for Bitcoin Core to sync and connect to peers (check with `bitcoin-cli getpeerinfo`).
-
-3. **Start the backend server:**
-   ```bash
-   npm start
-   ```
-
-4. **Open the frontend:**
-   - Open `bitcoin_nodes_live_map.html` in your web browser
-   - The map will automatically fetch nodes from the backend and display them
+**Terminal 2:**
+```bash
+npm start
+```
 
 ## How It Works
 
