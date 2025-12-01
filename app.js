@@ -9,10 +9,10 @@ let markersLayer;
 let updateCount = 0;
 let isUpdating = false;
 let cachedLocations = [];
+let ipToLocationCache = {};
 let useDemoData = false;
 
 function initMap() {
-    // Set map container dimensions explicitly before initialization
     const mapElement = document.getElementById('map');
     if (mapElement) {
         mapElement.style.width = window.innerWidth + 'px';
@@ -21,7 +21,6 @@ function initMap() {
     
     map = L.map('map').setView([20, 0], 2);
     
-    // Use light base map that works well with colored country overlays
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
         subdomains: 'abcd',
@@ -42,7 +41,6 @@ function initMap() {
         }
     }).addTo(map);
     
-    // Force map to fill entire screen - aggressive approach
     function forceFullScreen() {
         const mapElement = document.getElementById('map');
         const container = document.querySelector('.leaflet-container');
@@ -62,10 +60,8 @@ function initMap() {
         }
     }
     
-    // Immediate call
     forceFullScreen();
     
-    // Multiple delayed calls to handle all scenarios
     setTimeout(forceFullScreen, 10);
     setTimeout(forceFullScreen, 50);
     setTimeout(forceFullScreen, 100);
@@ -73,17 +69,14 @@ function initMap() {
     setTimeout(forceFullScreen, 500);
     setTimeout(forceFullScreen, 1000);
     
-    // Resize handler
     let resizeTimeout;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(forceFullScreen, 10);
     });
     
-    // Load handler
     window.addEventListener('load', forceFullScreen);
     
-    // DOM ready handler
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', forceFullScreen);
     }
@@ -198,7 +191,17 @@ async function geolocateHosts(hosts) {
     
     for (let i = 0; i < Math.min(hosts.length, MAX_IPS); i += batchSize) {
         const batch = hosts.slice(i, i + batchSize);
-        const promises = batch.map(ip => geolocateIP(ip));
+        const promises = batch.map(ip => {
+            if (ipToLocationCache[ip]) {
+                return Promise.resolve(ipToLocationCache[ip]);
+            }
+            return geolocateIP(ip).then(loc => {
+                if (loc) {
+                    ipToLocationCache[ip] = loc;
+                }
+                return loc;
+            });
+        });
         const results = await Promise.all(promises);
         
         results.forEach(loc => {
@@ -295,25 +298,41 @@ async function fetchAndUpdate() {
         
         if (hosts.length === 0) {
             updateStatus("No IPv4 nodes found", "warning");
+            updateMap([], 0);
             isUpdating = false;
             return;
         }
         
-        let locations = cachedLocations;
+        const currentIPs = new Set(hosts);
+        Object.keys(ipToLocationCache).forEach(ip => {
+            if (!currentIPs.has(ip)) {
+                delete ipToLocationCache[ip];
+            }
+        });
+        
+        let locations = [];
         
         if (useDemoData) {
             locations = cachedLocations;
-        } else if (updateCount === 1 || (updateCount % 10 === 0 && cachedLocations.length === 0)) {
-            updateStatus(`Found ${hosts.length} IPv4 nodes. Geolocating...`, "info");
-            locations = await geolocateHosts(hosts);
-            cachedLocations = locations;
         } else {
-            if (cachedLocations.length > 0) {
-                updateStatus(`Using cached locations (${cachedLocations.length} nodes)`, "info");
+            const cachedLocationsList = [];
+            const hostsNeedingGeolocation = [];
+            
+            hosts.forEach(ip => {
+                if (ipToLocationCache[ip]) {
+                    cachedLocationsList.push(ipToLocationCache[ip]);
+                } else {
+                    hostsNeedingGeolocation.push(ip);
+                }
+            });
+            
+            if (hostsNeedingGeolocation.length > 0) {
+                updateStatus(`Geolocating ${hostsNeedingGeolocation.length} new IPs...`, "info");
+                const newLocations = await geolocateHosts(hostsNeedingGeolocation);
+                locations = [...cachedLocationsList, ...newLocations];
             } else {
-                updateStatus(`Geolocating nodes (first time, may take a few minutes)...`, "info");
-                locations = await geolocateHosts(hosts);
-                cachedLocations = locations;
+                locations = cachedLocationsList;
+                updateStatus(`Using cached locations (${locations.length} nodes)`, "info");
             }
         }
         

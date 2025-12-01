@@ -2,17 +2,12 @@ const { exec } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
 
-// Bitcoin Core RPC configuration
-// Default: assumes bitcoin-cli is in PATH and uses default datadir
-// If you have custom config, set BITCOIN_CLI_PATH or use -datadir flag
 const BITCOIN_CLI_CMD = process.env.BITCOIN_CLI_PATH || 'bitcoin-cli';
 
-// Get nodes from Bitcoin Core using bitcoin-cli
 async function getNodesFromBitcoinCore() {
     try {
         console.log('Querying Bitcoin Core node for peer information...');
         
-        // Get peer information using bitcoin-cli
         const { stdout, stderr } = await execAsync(`${BITCOIN_CLI_CMD} getpeerinfo`);
         
         if (stderr) {
@@ -27,14 +22,12 @@ async function getNodesFromBitcoinCore() {
         
         console.log(`Found ${peerInfo.length} connected peers`);
         
-        // Extract node information
         const nodes = {};
         const seenIPs = new Set();
         
         peerInfo.forEach(peer => {
-            // Extract IP address from addr field (format: "ip:port" or "ip")
             let ip = null;
-            let port = 8333; // Default Bitcoin port
+            let port = 8333;
             
             if (peer.addr) {
                 const parts = peer.addr.split(':');
@@ -43,27 +36,22 @@ async function getNodesFromBitcoinCore() {
                     port = parseInt(parts[1]) || 8333;
                 }
             } else if (peer.addrlocal) {
-                // Fallback to local address
                 const parts = peer.addrlocal.split(':');
                 ip = parts[0];
             }
             
-            // Skip if no valid IP or already seen
             if (!ip || seenIPs.has(ip)) {
                 return;
             }
             
-            // Skip IPv6 addresses (only want IPv4)
             if (ip.includes(':') || ip.startsWith('[')) {
                 return;
             }
             
-            // Skip .onion addresses
             if (ip.endsWith('.onion')) {
                 return;
             }
             
-            // Validate IPv4 format
             const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
             if (!ipv4Regex.test(ip)) {
                 return;
@@ -93,7 +81,6 @@ async function getNodesFromBitcoinCore() {
     }
 }
 
-// Express server
 const express = require('express');
 const cors = require('cors');
 const app = express();
@@ -104,13 +91,12 @@ app.use(express.json());
 
 let cachedNodes = null;
 let lastFetch = 0;
-const CACHE_DURATION = 30000; // 30 second cache (Bitcoin Core updates peers frequently)
+const CACHE_DURATION = 30000;
 
 app.get('/api/nodes', async (req, res) => {
     try {
         const now = Date.now();
         
-        // Use cache if available and fresh
         if (cachedNodes && (now - lastFetch) < CACHE_DURATION) {
             return res.json({ nodes: cachedNodes });
         }
@@ -132,9 +118,28 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
 });
 
+app.get('/api/ips', async (req, res) => {
+    try {
+        const nodes = await getNodesFromBitcoinCore();
+        const ips = Object.keys(nodes).map(key => {
+            const lastColon = key.lastIndexOf(':');
+            return lastColon !== -1 ? key.substring(0, lastColon) : key;
+        });
+        res.json({ 
+            total: ips.length,
+            ips: ips.sort(),
+            note: 'These IPs were retrieved using bitcoin-cli getpeerinfo from your local Bitcoin Core node'
+        });
+    } catch (error) {
+        console.error('Error getting IPs:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Bitcoin Node Discovery Server running on http://localhost:${PORT}`);
     console.log(`API endpoint: http://localhost:${PORT}/api/nodes`);
+    console.log(`IP list endpoint: http://localhost:${PORT}/api/ips`);
     console.log(`\nMake sure Bitcoin Core (bitcoind) is running and bitcoin-cli is accessible.`);
-    console.log(`The server will query your local Bitcoin node for peer information.`);
+    console.log(`The server uses bitcoin-cli getpeerinfo to query your local Bitcoin node for peer information.`);
 });

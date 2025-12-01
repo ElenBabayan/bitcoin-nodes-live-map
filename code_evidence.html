@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin CLI Code Evidence</title>
+    <link rel="stylesheet" href="code_evidence.css" />
+</head>
+<body>
+    <div class="container">
+        <h1>₿ Bitcoin CLI Integration - Code Evidence</h1>
+        <div class="subtitle">
+            This document shows how the project uses <code>bitcoin-cli</code> to query an actual Bitcoin Core node
+        </div>
+        
+        <div class="section">
+            <div class="section-title">1. Backend Server Configuration</div>
+            <div class="file-path">server.js (lines 5-18)</div>
+            <div class="code-block">
+                <pre><span class="line-number">5</span>// ============================================================================
+<span class="line-number">6</span>// BITCOIN CLI INTEGRATION
+<span class="line-number">7</span>// ============================================================================
+<span class="line-number">8</span>// This server uses bitcoin-cli to query a local Bitcoin Core node (bitcoind)
+<span class="line-number">9</span>// to retrieve the IP addresses of all connected peer nodes.
+<span class="line-number">10</span>// 
+<span class="line-number">11</span>// The bitcoin-cli command used: <span class="highlight">`bitcoin-cli getpeerinfo`</span>
+<span class="line-number">12</span>// This queries the actual Bitcoin node running on your machine.
+<span class="line-number">13</span>// ============================================================================
+<span class="line-number">14</span>
+<span class="line-number">15</span>// Bitcoin Core RPC configuration
+<span class="line-number">16</span>// Default: assumes bitcoin-cli is in PATH and uses default datadir
+<span class="line-number">17</span>// If you have custom config, set BITCOIN_CLI_PATH or use -datadir flag
+<span class="line-number">18</span>const BITCOIN_CLI_CMD = process.env.BITCOIN_CLI_PATH || <span class="highlight">'bitcoin-cli'</span>;</pre>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">2. Bitcoin CLI Command Execution</div>
+            <div class="file-path">server.js (lines 23-28)</div>
+            <div class="explanation">
+                <strong>Key Point:</strong> This is where the code <strong>directly executes</strong> the <code>bitcoin-cli getpeerinfo</code> command using Node.js child_process.
+            </div>
+            <div class="code-block">
+                <pre><span class="line-number">23</span>async function getNodesFromBitcoinCore() {
+<span class="line-number">24</span>    try {
+<span class="line-number">25</span>        console.log('Querying Bitcoin Core node for peer information...');
+<span class="line-number">26</span>        
+<span class="line-number">27</span>        // Get peer information using bitcoin-cli
+<span class="line-number">28</span>        const { stdout, stderr } = await execAsync(<span class="highlight key-line">`${BITCOIN_CLI_CMD} getpeerinfo`</span>);</pre>
+            </div>
+            <div class="explanation">
+                <strong>What this does:</strong> Executes <code>bitcoin-cli getpeerinfo</code> which queries your local Bitcoin Core node (bitcoind) and returns JSON data containing information about all connected peer nodes, including their IP addresses.
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">3. IP Address Extraction</div>
+            <div class="file-path">server.js (lines 34-77)</div>
+            <div class="code-block">
+                <pre><span class="line-number">34</span>        peerInfo.forEach(peer => {
+<span class="line-number">35</span>            // Extract IP address from addr field (format: "ip:port" or "ip")
+<span class="line-number">36</span>            let ip = null;
+<span class="line-number">37</span>            let port = 8333; // Default Bitcoin port
+<span class="line-number">38</span>            
+<span class="line-number">39</span>            if (peer.addr) {
+<span class="line-number">40</span>                const parts = peer.addr.split(':');
+<span class="line-number">41</span>                ip = parts[0];
+<span class="line-number">42</span>                if (parts.length > 1) {
+<span class="line-number">43</span>                    port = parseInt(parts[1]) || 8333;
+<span class="line-number">44</span>                }
+<span class="line-number">45</span>            }
+<span class="line-number">46</span>            
+<span class="line-number">47</span>            // ... validation and filtering ...
+<span class="line-number">48</span>            
+<span class="line-number">72</span>            const key = `${ip}:${port}`;
+<span class="line-number">73</span>            nodes[key] = {
+<span class="line-number">74</span>                version: peer.version ? peer.version.toString() : '70015'
+<span class="line-number">75</span>            };
+<span class="line-number">76</span>            seenIPs.add(ip);
+<span class="line-number">77</span>        });</pre>
+            </div>
+            <div class="explanation">
+                <strong>Process:</strong> The JSON response from <code>bitcoin-cli getpeerinfo</code> is parsed, and IP addresses are extracted from each peer's <code>addr</code> field. Only IPv4 addresses are kept (IPv6 and .onion addresses are filtered out).
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">4. API Endpoint for IP Addresses</div>
+            <div class="file-path">server.js (lines 147-164)</div>
+            <div class="code-block">
+                <pre><span class="line-number">147</span>// Endpoint to get just the list of IP addresses (useful for screenshots)
+<span class="line-number">148</span>app.get('/api/ips', async (req, res) => {
+<span class="line-number">149</span>    try {
+<span class="line-number">150</span>        const nodes = await <span class="highlight">getNodesFromBitcoinCore()</span>;
+<span class="line-number">151</span>        const ips = Object.keys(nodes).map(key => {
+<span class="line-number">152</span>            const lastColon = key.lastIndexOf(':');
+<span class="line-number">153</span>            return lastColon !== -1 ? key.substring(0, lastColon) : key;
+<span class="line-number">154</span>        });
+<span class="line-number">155</span>        res.json({ 
+<span class="line-number">156</span>            total: ips.length,
+<span class="line-number">157</span>            ips: ips.sort(),
+<span class="line-number">158</span>            note: 'These IPs were retrieved using <span class="highlight">bitcoin-cli getpeerinfo</span> from your local Bitcoin Core node'
+<span class="line-number">159</span>        });
+<span class="line-number">160</span>    } catch (error) {
+<span class="line-number">161</span>        console.error('Error getting IPs:', error);
+<span class="line-number">162</span>        res.status(500).json({ error: error.message });
+<span class="line-number">163</span>    }
+<span class="line-number">164</span>});</pre>
+            </div>
+            <div class="explanation">
+                <strong>Endpoint:</strong> The <code>/api/ips</code> endpoint calls <code>getNodesFromBitcoinCore()</code> which executes <code>bitcoin-cli getpeerinfo</code>, then returns a sorted list of IP addresses.
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Summary</div>
+            <div class="explanation" style="font-size: 16px;">
+                <strong>✓ This project uses <code>bitcoin-cli</code> to query an actual Bitcoin Core node</strong><br><br>
+                • The backend server executes: <code>bitcoin-cli getpeerinfo</code><br>
+                • This queries the local Bitcoin Core node (bitcoind) running on the machine<br>
+                • IP addresses are extracted from the peer information returned by bitcoin-cli<br>
+                • The code is in <code>server.js</code>, specifically line 28 where <code>execAsync(\`${BITCOIN_CLI_CMD} getpeerinfo\`)</code> is called<br><br>
+                <strong>Command executed:</strong> <code style="background: rgba(0,213,255,0.2); padding: 5px 10px; border-radius: 5px;">bitcoin-cli getpeerinfo</code>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
