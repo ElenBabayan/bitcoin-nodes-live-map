@@ -1,0 +1,38 @@
+# Generated data files
+peers.json
+peers_with_locations.json
+bitcoin_peers_map.html
+
+# Redis dump
+dump.rdb
+
+# GeoIP databases (large binary files)
+bitnodes-crawler/geoip/*.mmdb
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+bitnodes-crawler/log/*
+
