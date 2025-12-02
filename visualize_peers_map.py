@@ -6,7 +6,7 @@ Requires peers_with_locations.json (created by geolocate_peers.py)
 
 import json
 import folium
-from folium.plugins import MarkerCluster
+from folium.plugins import MarkerCluster, HeatMap
 from collections import Counter
 import logging
 
@@ -14,13 +14,14 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 
-def create_peers_map(peers_data: dict, output_file: str = 'bitcoin_peers_map.html'):
+def create_peers_map(peers_data: dict, output_file: str = 'bitcoin_peers_map.html', enable_heatmap: bool = True):
     """
     Create an interactive map showing Bitcoin peer locations.
     
     Args:
         peers_data: Dictionary with 'peers' list containing peer data with location
         output_file: Output HTML file path
+        enable_heatmap: Whether to add heatmap layer (default: True)
     """
     peers = peers_data.get('peers', [])
     
@@ -54,8 +55,28 @@ def create_peers_map(peers_data: dict, output_file: str = 'bitcoin_peers_map.htm
     folium.TileLayer('CartoDB positron').add_to(m)
     folium.TileLayer('CartoDB dark_matter').add_to(m)
     
+    # Prepare heatmap data
+    heat_data = []
+    for peer in geolocated_peers:
+        lat = peer['location']['latitude']
+        lon = peer['location']['longitude']
+        heat_data.append([lat, lon])
+    
+    # Add heatmap layer if enabled
+    if enable_heatmap:
+        heat_layer = HeatMap(
+            heat_data,
+            name='Heatmap',
+            min_opacity=0.3,
+            max_zoom=18,
+            radius=15,
+            blur=20,
+            gradient={0.2: 'blue', 0.4: 'cyan', 0.6: 'lime', 0.8: 'yellow', 1.0: 'red'}
+        )
+        heat_layer.add_to(m)
+    
     # Create marker cluster for better performance
-    marker_cluster = MarkerCluster().add_to(m)
+    marker_cluster = MarkerCluster(name='Markers', show=not enable_heatmap).add_to(m)
     
     # Count peers by country for statistics
     country_counts = Counter()
@@ -167,6 +188,8 @@ Examples:
                        help='Input file with geolocated peers (default: peers_with_locations.json)')
     parser.add_argument('--output', type=str, default='bitcoin_peers_map.html',
                        help='Output HTML map file (default: bitcoin_peers_map.html)')
+    parser.add_argument('--no-heatmap', action='store_true',
+                       help='Disable heatmap layer (default: heatmap enabled)')
     
     args = parser.parse_args()
     
@@ -186,7 +209,7 @@ Examples:
         return
     
     # Create map
-    create_peers_map(peers_data, args.output)
+    create_peers_map(peers_data, args.output, enable_heatmap=not args.no_heatmap)
 
 
 if __name__ == '__main__':
