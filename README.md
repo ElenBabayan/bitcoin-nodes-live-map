@@ -20,7 +20,7 @@ Built using the official [bitnodes-crawler](https://github.com/ayeowch/bitnodes)
 git clone https://github.com/ayeowch/bitnodes.git bitnodes-crawler
 
 # 2. Install dependencies
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 
 # 3. Fetch Bitcoin nodes (choose ONE method below)
 
@@ -39,6 +39,16 @@ python3 visualize_peers_map.py --input peers_with_locations.json --output bitcoi
 # 6. Open in browser
 open bitcoin_peers_map.html
 ```
+
+## Troubleshooting
+
+**Command not found errors?** Use `python3` and `pip3` instead of `python` and `pip` (common on macOS/Linux)
+
+**Permission denied?** Use `pip3 install --user -r requirements.txt`
+
+**Redis errors?** Ignore them - not needed for our scripts
+
+**Module not found?** Run `pip3 install -r requirements.txt` again
 
 ## Results
 
