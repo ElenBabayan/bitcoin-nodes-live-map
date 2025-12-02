@@ -184,39 +184,6 @@ Out of 24,000 total nodes:
   - ~400 CJDNS nodes
   - These are intentionally anonymous and cannot be mapped
 
-## Command Reference
-
-### Fetch Nodes (API)
-```bash
-python3 fetch_bitnodes.py --output peers.json
-```
-
-### Crawl Nodes (Direct)
-```bash
-python3 crawl_bitnodes.py --max-nodes 100 --output peers.json
-```
-Options:
-- `--max-nodes N` - Maximum nodes to visit (default: 1000)
-- `--output FILE` - Output file (default: peers.json)
-
-### Geolocate
-```bash
-python3 geolocate_maxmind.py --input peers.json --output peers_with_locations.json
-```
-Options:
-- `--input FILE` - Input peers file
-- `--output FILE` - Output with locations
-- `--db PATH` - Path to GeoLite2-City.mmdb
-
-### Visualize
-```bash
-python3 visualize_peers_map.py --input peers_with_locations.json --output map.html
-```
-Options:
-- `--input FILE` - Input geolocated peers
-- `--output FILE` - Output HTML map
-- `--no-heatmap` - Disable heatmap (markers only)
-
 ## References
 
 - [bitnodes.io](https://bitnodes.io/) - Bitcoin network crawler
