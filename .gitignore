@@ -6,8 +6,11 @@ bitcoin_peers_map.html
 # Redis dump
 dump.rdb
 
-# GeoIP databases (large binary files)
-bitnodes-crawler/geoip/*.mmdb
+# GeoIP databases (large binary files) - Keep the directory but not in subdirs
+geoip/*.mmdb
+
+# bitnodes-crawler (no longer needed, but if present, ignore it)
+bitnodes-crawler/
 
 # Python cache
 __pycache__/

@@ -7,11 +7,11 @@ Interactive heatmap visualization of all Bitcoin nodes online worldwide.
 ## Overview
 
 This project visualizes the global Bitcoin network by:
-1. **Discovering Bitcoin nodes** using two methods (API or direct crawling)
+1. **Discovering Bitcoin nodes** using the bitnodes.io API
 2. **Geolocating nodes** using MaxMind GeoLite2-City database
 3. **Creating an interactive heatmap** showing node concentration
 
-Built using the official [bitnodes-crawler](https://github.com/ayeowch/bitnodes) protocol library.
+Data from [bitnodes.io](https://bitnodes.io/) - a Bitcoin network crawler that monitors the network 24/7.
 
 ## Quick Start
 
@@ -24,34 +24,25 @@ Built using the official [bitnodes-crawler](https://github.com/ayeowch/bitnodes)
 This script automatically:
 - Detects Python (python3 or python)
 - Installs dependencies if needed
-- Clones bitnodes-crawler if needed
 - Runs all 3 steps (fetch → geolocate → visualize)
 - Opens the map in your browser
 
 ### Manual Steps
 
 ```bash
-# 1. Clone bitnodes-crawler (includes GeoIP database)
-git clone https://github.com/ayeowch/bitnodes.git bitnodes-crawler
-
-# 2. Install dependencies
+# 1. Install dependencies
 pip3 install -r requirements.txt
 
-# 3. Fetch Bitcoin nodes (choose ONE method below)
-
-## Method A: bitnodes.io API (Recommended - gets all 24,000 nodes)
+# 2. Fetch Bitcoin nodes from bitnodes.io API
 python3 fetch_bitnodes.py --output peers.json
 
-## Method B: Direct crawling (connects to real nodes, limited discovery)
-python3 crawl_bitnodes.py --max-nodes 200 --output peers.json
-
-# 4. Geolocate nodes (instant using MaxMind database)
+# 3. Geolocate nodes (instant using MaxMind database)
 python3 geolocate_maxmind.py --input peers.json --output peers_with_locations.json
 
-# 5. Create heatmap visualization
+# 4. Create heatmap visualization
 python3 visualize_peers_map.py --input peers_with_locations.json --output bitcoin_peers_map.html
 
-# 6. Open in browser
+# 5. Open in browser
 open bitcoin_peers_map.html
 ```
 
@@ -73,9 +64,9 @@ open bitcoin_peers_map.html
 - **98 countries** represented
 - **Top countries**: USA (2,324), Germany (972), France (451)
 
-## Two Approaches
+## How It Works
 
-### Method A: bitnodes.io API (Recommended)
+**Data Source:** bitnodes.io API
 
 **File:** `fetch_bitnodes.py`
 
@@ -84,54 +75,29 @@ open bitcoin_peers_map.html
 - ✅ Fast (instant download)
 - ℹ️ Uses pre-crawled data from bitnodes.io's continuous crawling
 
-**How it works:**
+**Behind the scenes:**
 - bitnodes.io runs persistent crawler infrastructure 24/7
 - Crawler connects to real Bitcoin nodes using P2P protocol
 - API provides snapshot of discovered nodes
 - Data represents actual node connections, just pre-collected
 
-### Method B: Direct Crawling
-
-**File:** `crawl_bitnodes.py`
-
-- ✅ Connects directly to Bitcoin nodes
-- ✅ Uses bitnodes-crawler protocol library
-- ✅ Implements Bitcoin P2P protocol
-- ⚠️ Limited peer discovery (~25 nodes from DNS seeds)
-
-**Why limited discovery?**
-
-Modern Bitcoin nodes prioritize privacy and security:
-- Only share peer lists with trusted, long-established connections
-- Ignore `getaddr` requests from new connections
-- Prevents network mapping attacks and Eclipse attacks
-- Our short-lived connections (2-5 seconds) aren't trusted
-
-**What we successfully do:**
-1. ✅ Query DNS seeds for initial nodes
-2. ✅ Establish TCP connections
-3. ✅ Complete Bitcoin handshake (version/verack)
-4. ✅ Send `getaddr` messages
-5. ❌ Nodes don't respond (privacy protection)
-
-**Why bitnodes.io succeeds:**
-- Maintains persistent connections (hours/days)
-- Distributed crawler infrastructure
-- Builds trust with nodes over time
-- Multiple attempts and retry logic
+Modern Bitcoin nodes prioritize privacy and security, making direct crawling difficult:
+- Nodes only share peer lists with trusted, long-established connections
+- They ignore `getaddr` requests from new connections to prevent network mapping attacks
+- bitnodes.io succeeds by maintaining persistent connections and distributed infrastructure
 
 ## Project Structure
 
 ```
 bitcoin-nodes-live-map/
 ├── fetch_bitnodes.py              # Fetch nodes from bitnodes.io API
-├── crawl_bitnodes.py              # Direct P2P crawler (educational)
 ├── geolocate_maxmind.py           # Geolocate using MaxMind database
 ├── visualize_peers_map.py         # Create heatmap visualization
 ├── requirements.txt               # Python dependencies
+├── run_pipeline.sh                # One-command script to run everything
 ├── README.md                      # This file
-├── bitnodes-crawler/              # Official bitnodes protocol library
-│   └── geoip/                     # MaxMind GeoLite2 databases
+├── geoip/                         # MaxMind GeoLite2 database
+│   └── GeoLite2-City.mmdb         # IP geolocation database (60MB)
 ├── peers.json                     # Discovered nodes (generated)
 ├── peers_with_locations.json      # Geolocated nodes (generated)
 └── bitcoin_peers_map.html         # Final heatmap (generated)
@@ -158,18 +124,10 @@ Install all: `pip install -r requirements.txt`
 
 ## Technical Details
 
-### Bitcoin P2P Protocol
-
-Both approaches use the Bitcoin P2P protocol:
-- **Protocol version:** 70016
-- **User agent:** `/bitnodes-local-crawler:0.1/`
-- **Messages:** version, verack, getaddr, addr
-- **Default port:** 8333
-
 ### Geolocation
 
 Uses MaxMind GeoLite2-City database:
-- **Database:** Included in bitnodes-crawler/geoip/
+- **Database:** Included in geoip/GeoLite2-City.mmdb
 - **Speed:** Instant (local lookups)
 - **Accuracy:** City-level precision
 - **Coverage:** ~32% of nodes (IPv4 only)
@@ -186,9 +144,9 @@ Out of 24,000 total nodes:
 
 ## References
 
-- [bitnodes.io](https://bitnodes.io/) - Bitcoin network crawler
-- [bitnodes-crawler GitHub](https://github.com/ayeowch/bitnodes) - Crawler source code
+- [bitnodes.io](https://bitnodes.io/) - Bitcoin network crawler and data source
+- [bitnodes.io API](https://bitnodes.io/api/) - Public API for Bitcoin network data
 - [MaxMind GeoLite2](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data) - Free IP geolocation
-- [Bitcoin P2P Protocol](https://en.bitcoin.it/wiki/Protocol_documentation) - Protocol specification
 - [Folium Documentation](https://python-visualization.github.io/folium/) - Python mapping library
+- [Bitcoin P2P Protocol](https://en.bitcoin.it/wiki/Protocol_documentation) - Protocol specification
 

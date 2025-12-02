@@ -3,7 +3,7 @@
 Geolocate Bitcoin peers using MaxMind GeoLite2-City database.
 This is INSTANT - no API rate limits!
 
-Uses the GeoLite2-City.mmdb from bitnodes-crawler.
+Uses the local GeoLite2-City.mmdb database.
 """
 
 import json
@@ -40,9 +40,9 @@ class MaxMindGeolocator:
         
         # Find database
         if db_path is None:
-            # Look in bitnodes-crawler
+            # Look in local geoip directory
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            db_path = os.path.join(script_dir, 'bitnodes-crawler', 'geoip', 'GeoLite2-City.mmdb')
+            db_path = os.path.join(script_dir, 'geoip', 'GeoLite2-City.mmdb')
         
         if not os.path.exists(db_path):
             raise FileNotFoundError(f"GeoLite2-City database not found at: {db_path}")
@@ -136,7 +136,7 @@ def main():
 This script uses the local MaxMind GeoLite2-City database for INSTANT geolocation.
 No API rate limits - can process all 20,000+ nodes in seconds!
 
-The database is included with bitnodes-crawler in geoip/GeoLite2-City.mmdb
+The database is included in geoip/GeoLite2-City.mmdb
 
 Examples:
   python3 geolocate_maxmind.py --input peers.json --output peers_with_locations.json
@@ -148,7 +148,7 @@ Examples:
     parser.add_argument('--output', type=str, default='peers_with_locations.json',
                        help='Output file with location data (default: peers_with_locations.json)')
     parser.add_argument('--db', type=str, default=None,
-                       help='Path to GeoLite2-City.mmdb (default: bitnodes-crawler/geoip/)')
+                       help='Path to GeoLite2-City.mmdb (default: geoip/GeoLite2-City.mmdb)')
     
     args = parser.parse_args()
     

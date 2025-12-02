@@ -38,14 +38,6 @@ else
 fi
 echo ""
 
-# Check bitnodes-crawler
-if [ ! -d "bitnodes-crawler" ]; then
-    echo "📥 Cloning bitnodes-crawler..."
-    git clone https://github.com/ayeowch/bitnodes.git bitnodes-crawler
-    echo "✓ bitnodes-crawler cloned"
-else
-    echo "✓ bitnodes-crawler found"
-fi
 echo ""
 
 # Step 1: Fetch nodes
