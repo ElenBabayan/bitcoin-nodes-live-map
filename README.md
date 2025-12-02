@@ -15,6 +15,21 @@ Built using the official [bitnodes-crawler](https://github.com/ayeowch/bitnodes)
 
 ## Quick Start
 
+### One-Command Run (Easiest)
+
+```bash
+./run_pipeline.sh
+```
+
+This script automatically:
+- Detects Python (python3 or python)
+- Installs dependencies if needed
+- Clones bitnodes-crawler if needed
+- Runs all 3 steps (fetch → geolocate → visualize)
+- Opens the map in your browser
+
+### Manual Steps
+
 ```bash
 # 1. Clone bitnodes-crawler (includes GeoIP database)
 git clone https://github.com/ayeowch/bitnodes.git bitnodes-crawler
