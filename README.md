@@ -1,77 +1,78 @@
-# Bitcoin Node Heatmap Visualization
+# Bitcoin Peer Crawler
 
-This project visualizes the global distribution of Bitcoin nodes by creating an interactive heatmap. It uses a **Python Bitcoin P2P network crawler** (similar to bitnodes-crawler) to discover nodes across the entire Bitcoin network by directly connecting to nodes using the Bitcoin P2P protocol and requesting peer addresses via `getaddr` messages.
+Gets all peers of a given Bitcoin node using open-source crawlers.
 
-## Setup
+## Important Note
 
-### Prerequisites
+**Bitcoin CLI does NOT expose an API to list peers of a given node.** You cannot connect to a random node and ask for its peers from a command line interface. 
 
-1. **Python 3** (for the Bitcoin crawler)
-2. A web browser (to view the visualization)
+This project uses open-source Bitcoin crawlers:
+- **bitnodes-crawler** (open source, same idea as bitnodes.io)
+- **python-bitcoinlib** (for Bitcoin protocol utilities)
 
-### Installation
+## Installation
 
-**No additional Python packages required!** The Python crawler uses only the standard library (similar to bitnodes-crawler approach).
+1. Install Python 3.7 or higher
 
-**No Bitcoin Core installation required!** The crawler connects directly to the Bitcoin network.
-
-## Running the Project
-
-1. **Run the Python crawler** to discover Bitcoin nodes:
+2. Install bitnodes-crawler:
 ```bash
-python3 services/bitcoin_crawler.py --max-nodes 1000
+git clone https://github.com/ayeowch/bitnodes.git
+cd bitnodes
+pip install -r requirements.txt
 ```
 
-This will create a `nodes.json` file in the project root with all discovered nodes.
+3. Install python-bitcoinlib (optional, for additional utilities):
+```bash
+pip install python-bitcoinlib
+```
 
-2. **Open the visualization** in your browser:
-   - Option A: Use Python's built-in HTTP server:
-     ```bash
-     python3 -m http.server 8000
-     ```
-     Then open: `http://localhost:8000/components/bitcoin-nodes-live-map/bitcoin_nodes_live_map.html`
-   
-   - Option B: Open the HTML file directly (some browsers may have CORS restrictions)
+## Usage
+
+### Using bitnodes-crawler
+
+**Option 1: Run bitnodes-crawler directly**
+```bash
+cd bitnodes
+python crawler.py
+```
+
+**Option 2: Use this wrapper script**
+```bash
+# If bitnodes is in the current directory or home directory:
+python3 bitcoin_peer_crawler.py
+
+# Or specify the path:
+python3 bitcoin_peer_crawler.py --bitnodes-path /path/to/bitnodes
+
+# Show installation instructions:
+python3 bitcoin_peer_crawler.py --install-instructions
+```
 
 ## How It Works
 
-- **Backend uses a Python Bitcoin P2P crawler** (similar to bitnodes-crawler) that:
-  1. Connects to Bitcoin DNS seeds to get initial nodes
-  2. Performs Bitcoin P2P protocol handshake with each node
-  3. Sends `getaddr` messages to request peer addresses
-  4. Recursively crawls discovered peers to build a comprehensive network map
-- Discovers **all reachable nodes** in the Bitcoin network (not just local peers)
-- Extracts IPv4 addresses from discovered nodes
-- Frontend geolocates IPs and displays them on an interactive Leaflet map with heatmap overlay
+1. **bitnodes-crawler**: Crawls the Bitcoin network by sending `getaddr` messages recursively to discover all reachable nodes, similar to bitnodes.io
+2. **python-bitcoinlib**: Provides Bitcoin protocol utilities and network parameter selection
 
-The Python crawler directly implements the Bitcoin P2P protocol (similar to the open-source bitnodes-crawler project), using only Python standard library - no external dependencies required.
+## Output
 
-## Configuration
+The crawler will output discovered peers. Check the bitnodes directory for results.
 
-- `NODES_JSON_URL` in `app.js`: Path to nodes.json file (default: "nodes.json")
-- `MAX_IPS` in `app.js`: Number of nodes to geolocate (default: 800)
-- `UPDATE_INTERVAL` in `app.js`: Update frequency in milliseconds (default: 10000)
-- `--max-nodes` argument: Maximum nodes to discover during crawl (default: 1000)
+## References
 
-## Technical Details
+- [bitnodes-crawler GitHub](https://github.com/ayeowch/bitnodes)
+- [bitnodes.io](https://bitnodes.io/)
+- [python-bitcoinlib](https://github.com/petertodd/python-bitcoinlib)
+- [Bitcoin P2P Protocol](https://en.bitcoin.it/wiki/Protocol_documentation)
 
-The Python crawler (`services/bitcoin_crawler.py`) implements the Bitcoin P2P protocol:
-- Uses Bitcoin mainnet magic bytes (`0xf9beb4d9`)
-- Protocol version 70015
-- Sends `version`, `verack`, and `getaddr` messages
-- Parses `addr` responses to extract peer information
-- Recursively crawls the network starting from DNS seeds
-- Uses only Python standard library (no external dependencies)
+## Why Not Bitcoin CLI?
 
-This implementation is similar to:
-- [bitnodes-crawler](https://github.com/ayeowch/bitnodes) (Python, open source)
-- [bitnodes.io](https://bitnodes.io/) (web service)
+Bitcoin Core's `bitcoin-cli` does NOT provide an API to:
+- Connect to a random node
+- Ask that node for its list of peers
 
-The advantage over `bitcoin-cli getpeerinfo` is that it discovers **all reachable nodes** in the network, not just the peers connected to a single local node.
+You can only get peers from your **own local node** using:
+```bash
+bitcoin-cli getpeerinfo  # Only works with YOUR local node
+```
 
-### Python Configuration
-
-- The crawler script is located at: `services/bitcoin_crawler.py`
-- Run it with: `python3 services/bitcoin_crawler.py --max-nodes 1000`
-- Output is written to `nodes.json` in the project root
-- The script also outputs JSON to stdout for programmatic use
+To crawl the network and discover peers from any node, you need to use crawlers like bitnodes-crawler that implement the Bitcoin P2P protocol.

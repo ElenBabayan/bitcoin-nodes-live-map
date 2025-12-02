@@ -1,0 +1,40 @@
+2025-12-02 22:06:51,958 - INFO - Using python-bitcoinlib for mainnet network
+2025-12-02 22:06:51,971 - INFO - Got peer from DNS seed seed.bitcoin.sipa.be: 177.140.189.171:8333
+2025-12-02 22:06:51,971 - INFO - Got peer from DNS seed seed.bitcoin.sipa.be: 172.232.181.64:8333
+2025-12-02 22:06:51,971 - INFO - Got peer from DNS seed seed.bitcoin.sipa.be: 79.184.134.211:8333
+2025-12-02 22:06:51,980 - INFO - Got peer from DNS seed dnsseed.bluematt.me: 147.124.81.171:8333
+2025-12-02 22:06:51,980 - INFO - Got peer from DNS seed dnsseed.bluematt.me: 79.124.7.241:8333
+2025-12-02 22:06:51,980 - INFO - Got peer from DNS seed dnsseed.bluematt.me: 195.123.217.63:8333
+2025-12-02 22:06:51,989 - INFO - Got peer from DNS seed dnsseed.bitcoin.dashjr.org: 35.199.31.130:8333
+2025-12-02 22:06:51,989 - INFO - Got peer from DNS seed dnsseed.bitcoin.dashjr.org: 98.82.198.99:8333
+2025-12-02 22:06:51,989 - INFO - Got peer from DNS seed dnsseed.bitcoin.dashjr.org: 51.154.62.103:8333
+2025-12-02 22:06:51,998 - INFO - Got peer from DNS seed seed.bitcoinstats.com: 173.46.87.16:8333
+2025-12-02 22:06:51,998 - INFO - Got peer from DNS seed seed.bitcoinstats.com: 81.79.176.50:8333
+2025-12-02 22:06:51,998 - INFO - Got peer from DNS seed seed.bitcoinstats.com: 56.126.33.251:8333
+2025-12-02 22:06:52,008 - INFO - Got peer from DNS seed seed.bitcoin.jonasschnelli.ch: 43.200.189.153:8333
+2025-12-02 22:06:52,008 - INFO - Got peer from DNS seed seed.bitcoin.jonasschnelli.ch: 123.100.246.234:8333
+2025-12-02 22:06:52,008 - INFO - Got peer from DNS seed seed.bitcoin.jonasschnelli.ch: 184.174.95.132:8333
+2025-12-02 22:06:52,076 - INFO - Got peer from DNS seed seed.btc.petertodd.org: 98.201.34.12:8333
+2025-12-02 22:06:52,076 - INFO - Got peer from DNS seed seed.btc.petertodd.org: 172.104.136.183:8333
+2025-12-02 22:06:52,076 - INFO - Got peer from DNS seed seed.btc.petertodd.org: 126.122.116.61:8333
+2025-12-02 22:06:52,076 - INFO - Starting crawl with 18 initial peers
+2025-12-02 22:06:52,076 - INFO - Crawling 177.140.189.171:8333 (1/500 visited, 18 discovered)
+2025-12-02 22:06:53,752 - INFO - Crawling 172.232.181.64:8333 (2/500 visited, 18 discovered)
+2025-12-02 22:06:56,822 - INFO - Crawling 79.184.134.211:8333 (3/500 visited, 18 discovered)
+2025-12-02 22:06:59,448 - INFO - Crawling 147.124.81.171:8333 (4/500 visited, 18 discovered)
+2025-12-02 22:07:00,538 - INFO - Crawling 79.124.7.241:8333 (5/500 visited, 18 discovered)
+2025-12-02 22:07:03,280 - INFO - Crawling 195.123.217.63:8333 (6/500 visited, 18 discovered)
+2025-12-02 22:07:03,625 - INFO - Discovered 829 peers from 195.123.217.63:8333
+2025-12-02 22:07:03,827 - INFO - Crawling 35.199.31.130:8333 (7/500 visited, 846 discovered)
+2025-12-02 22:07:05,203 - INFO - Crawling 98.82.198.99:8333 (8/500 visited, 846 discovered)
+2025-12-02 22:07:08,150 - INFO - Crawling 51.154.62.103:8333 (9/500 visited, 846 discovered)
+2025-12-02 22:07:08,482 - INFO - Discovered 853 peers from 51.154.62.103:8333
+2025-12-02 22:07:08,684 - INFO - Crawling 173.46.87.16:8333 (10/500 visited, 1689 discovered)
+2025-12-02 22:07:12,033 - INFO - Crawling 81.79.176.50:8333 (11/500 visited, 1689 discovered)
+2025-12-02 22:07:22,236 - INFO - Crawling 56.126.33.251:8333 (12/500 visited, 1689 discovered)
+2025-12-02 22:07:25,759 - INFO - Crawling 43.200.189.153:8333 (13/500 visited, 1689 discovered)
+2025-12-02 22:07:29,410 - INFO - Crawling 123.100.246.234:8333 (14/500 visited, 1689 discovered)
+2025-12-02 22:07:32,765 - INFO - Crawling 184.174.95.132:8333 (15/500 visited, 1689 discovered)
+2025-12-02 22:07:36,114 - INFO - Crawling 98.201.34.12:8333 (16/500 visited, 1689 discovered)
+2025-12-02 22:07:46,318 - INFO - Crawling 172.104.136.183:8333 (17/500 visited, 1689 discovered)
+2025-12-02 22:07:48,765 - INFO - Crawling 126.122.116.61:8333 (18/500 visited, 1689 discovered)
