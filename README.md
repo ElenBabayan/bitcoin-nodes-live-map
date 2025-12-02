@@ -14,16 +14,21 @@ This project uses open-source Bitcoin crawlers:
 
 1. Install Python 3.7 or higher
 
-2. Install bitnodes-crawler:
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+This will install:
+- `python-bitcoinlib` - Bitcoin protocol utilities
+- `requests` - For geolocation API calls
+- `folium` - For interactive map visualization
+
+3. (Optional) Install bitnodes-crawler for alternative crawling:
 ```bash
 git clone https://github.com/ayeowch/bitnodes.git
 cd bitnodes
 pip install -r requirements.txt
-```
-
-3. Install python-bitcoinlib (optional, for additional utilities):
-```bash
-pip install python-bitcoinlib
 ```
 
 ## Usage
@@ -55,7 +60,44 @@ python3 bitcoin_peer_crawler.py --install-instructions
 
 ## Output
 
-The crawler will output discovered peers. Check the bitnodes directory for results.
+The crawler will output discovered peers to `peers.json`.
+
+## Geolocation and Map Visualization
+
+After crawling peers, you can geolocate them and visualize on a map:
+
+### Step 1: Geolocate Peers
+
+Add location data (latitude, longitude, country, city) to your peers:
+
+```bash
+python3 geolocate_peers.py --input peers.json --output peers_with_locations.json
+```
+
+This script:
+- Uses ip-api.com (free tier, 45 requests/minute)
+- Adds location data to each peer
+- Saves progress incrementally
+- Includes rate limiting to respect API limits
+
+**Note:** For large peer lists, this may take some time due to rate limiting.
+
+### Step 2: Visualize on Map
+
+Create an interactive HTML map showing all peer locations:
+
+```bash
+python3 visualize_peers_map.py --input peers_with_locations.json --output bitcoin_peers_map.html
+```
+
+The map includes:
+- Interactive markers for each peer location
+- Clustered markers for better performance
+- Popup information (IP, location, ISP)
+- Statistics panel showing top countries
+- Multiple map tile options (OpenStreetMap, CartoDB)
+
+Open the generated HTML file in your web browser to view the map.
 
 ## References
 
