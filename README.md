@@ -129,6 +129,23 @@ open bitcoin_network_heatmap.html
 
 ## Technical Details
 
+### Custom Crawler – Short Breakdown
+
+• **Bitcoin P2P Protocol**  
+Implemented VERSION/VERACK/GETADDR/ADDR logic from scratch using testnet magic bytes and full message framing (headers, checksum, varint, etc.).
+
+• **High-Concurrency Networking**  
+Used asyncio with 200+ parallel connections, strict timeouts, and filtering of private/unreachable IPs.
+
+• **Crawl Logic**  
+Seed → handshake → GETADDR → extract ~1000 peers → dedupe → continue until ~20K nodes.
+
+• **Storage & Scaling**  
+Redis for fast "seen IP" checks; stored metadata (IP, port, user agent, protocol version) and exported to SQLite.
+
+• **Data Pipeline**  
+Crawler → Redis → SQLite → MaxMind geolocation → Folium heatmap.
+
 ### Bitcoin P2P Protocol
 
 Both approaches use the Bitcoin P2P protocol:
