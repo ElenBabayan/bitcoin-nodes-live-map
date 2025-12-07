@@ -12,6 +12,9 @@ dump.rdb
 # GeoIP databases (large binary files) - Keep the directory but not in subdirs
 geoip/*.mmdb
 
+# Keep the compressed version though!
+!geoip/*.mmdb.gz
+
 # bitnodes-crawler (no longer needed, but if present, ignore it)
 bitnodes-crawler/
 

@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """
-Geolocate Bitcoin peers using MaxMind GeoLite2-City database.
+Geolocate Bitcoin peers using IP geolocation database.
 This is INSTANT - no API rate limits!
 
-Uses the local GeoLite2-City.mmdb database.
+Auto-decompresses database on first run (included in repo, no download needed!).
 """
 
 import json
 import os
 import sys
+import gzip
 import logging
+import shutil
+from pathlib import Path
 from typing import Dict, List, Optional
 from database import PeersDatabase
 
@@ -26,12 +29,38 @@ except ImportError:
     logger.error("geoip2 not installed. Run: pip install geoip2")
 
 
+def decompress_geolite2_db(compressed_path: str, db_path: str) -> bool:
+    """
+    Decompress the included GeoLite2-City database.
+    
+    The database is included compressed in the repo to save space.
+    This extracts it on first run.
+    """
+    logger.info("📦 Decompressing GeoLite2-City database...")
+    logger.info(f"   From: {os.path.basename(compressed_path)}")
+    logger.info(f"   To: {os.path.basename(db_path)}")
+    
+    try:
+        with gzip.open(compressed_path, 'rb') as f_in:
+            with open(db_path, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+        
+        file_size = os.path.getsize(db_path) / (1024 * 1024)
+        logger.info(f"✅ Decompressed successfully! ({file_size:.1f} MB)")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to decompress database: {e}")
+        return False
+
+
 class MaxMindGeolocator:
     """Geolocator using MaxMind GeoLite2-City database."""
     
     def __init__(self, db_path: str = None):
         """
         Initialize with GeoLite2-City database.
+        Auto-decompresses from included .gz file if needed!
         
         Args:
             db_path: Path to GeoLite2-City.mmdb file
@@ -45,8 +74,18 @@ class MaxMindGeolocator:
             script_dir = os.path.dirname(os.path.abspath(__file__))
             db_path = os.path.join(script_dir, 'geoip', 'GeoLite2-City.mmdb')
         
+        # Auto-decompress if not found but .gz exists
         if not os.path.exists(db_path):
-            raise FileNotFoundError(f"GeoLite2-City database not found at: {db_path}")
+            compressed_path = db_path + '.gz'
+            if os.path.exists(compressed_path):
+                logger.info(f"Database not found, but compressed version exists")
+                if not decompress_geolite2_db(compressed_path, db_path):
+                    raise FileNotFoundError(f"Could not decompress GeoLite2-City database")
+            else:
+                raise FileNotFoundError(
+                    f"GeoLite2-City database not found at: {db_path}\n"
+                    f"Compressed version also not found at: {compressed_path}"
+                )
         
         logger.info(f"Loading GeoLite2-City database from: {db_path}")
         self.reader = geoip2.database.Reader(db_path)
@@ -147,13 +186,13 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(
-        description='Geolocate Bitcoin peers using MaxMind GeoLite2-City database',
+        description='Geolocate Bitcoin peers using IP geolocation database',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-This script uses the local MaxMind GeoLite2-City database for INSTANT geolocation.
-No API rate limits - can process all 20,000+ nodes in seconds!
+This script uses MaxMind GeoLite2-City database for IP geolocation.
+Auto-downloads database on first run (no manual setup required!).
 
-The database is included in geoip/GeoLite2-City.mmdb
+No API rate limits - can process all 20,000+ nodes in seconds!
 
 Examples:
   python3 geolocate_maxmind.py --input peers.json --output peers_with_locations.json
@@ -176,8 +215,9 @@ Examples:
     
     args = parser.parse_args()
     
-    # Initialize geolocator
+    # Initialize geolocator (auto-downloads database if needed!)
     try:
+        logger.info("🌍 Initializing geolocation (auto-setup enabled)")
         geolocator = MaxMindGeolocator(db_path=args.geoip_db)
     except (ImportError, FileNotFoundError) as e:
         logger.error(str(e))
@@ -252,7 +292,7 @@ Examples:
     
     stats = output_data['geolocation_stats']
     print(f"\n{'='*60}")
-    print(f"✅ MaxMind geolocation complete!")
+    print(f"✅ Geolocation complete!")
     print(f"Total peers: {stats['total_peers']}")
     print(f"Successfully geolocated: {stats['geolocated']}")
     print(f"Failed (private/invalid IPs): {stats['failed']}")
