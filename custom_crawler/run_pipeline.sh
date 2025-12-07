@@ -119,6 +119,13 @@ echo "║    🗺️  bitcoin_network_heatmap.html  - Interactive heatmap       
 echo "║    🌐 bitcoin_network_globe.html     - 3D globe visualization              ║"
 echo "╚══════════════════════════════════════════════════════════════════════════╝"
 echo ""
-echo "Open the HTML files in your browser to explore the visualization!"
-echo "View Redis data with: redis-cli -n 1 KEYS 'btc:*'"
+
+# Open the HTML files in browser
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    open bitcoin_network_heatmap.html
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    xdg-open bitcoin_network_heatmap.html
+elif [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+    start bitcoin_network_heatmap.html
+fi
 

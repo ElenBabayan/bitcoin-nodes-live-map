@@ -117,7 +117,8 @@ class BitcoinNetworkMap:
         output_path: str = 'bitcoin_network_heatmap.html',
         theme: str = 'bitcoin',
         show_markers: bool = True,
-        show_stats: bool = True
+        show_stats: bool = True,
+        max_markers: int = 2000
     ) -> str:
         """
         Create a stunning heatmap visualization of Bitcoin nodes.
@@ -127,6 +128,8 @@ class BitcoinNetworkMap:
             theme: Color theme ('cyber', 'bitcoin', 'neon')
             show_markers: Whether to show individual node markers
             show_stats: Whether to show statistics overlay
+            max_markers: Maximum markers to show (default: 2000 for ~3-5MB files)
+                        Set to None for all markers (may create 50MB+ files!)
             
         Returns:
             Path to generated HTML file
@@ -202,7 +205,7 @@ class BitcoinNetworkMap:
         
         # Add markers with clustering if enabled
         if show_markers:
-            self._add_markers(m, peers)
+            self._add_markers(m, peers, max_markers=max_markers)
         
         # Add statistics overlay
         if show_stats:
@@ -230,8 +233,15 @@ class BitcoinNetworkMap:
         
         return output_path
     
-    def _add_markers(self, m: folium.Map, peers: List[Dict]):
-        """Add clustered markers for each peer."""
+    def _add_markers(self, m: folium.Map, peers: List[Dict], max_markers: int = None):
+        """Add clustered markers for each peer.
+        
+        Args:
+            m: Folium map object
+            peers: List of peer dictionaries
+            max_markers: Maximum number of markers to add (None = all). 
+                        Recommended: 500-2000 for reasonable file sizes.
+        """
         marker_cluster = MarkerCluster(
             name='📍 Individual Nodes',
             show=False,  # Hidden by default (heatmap shows first)
@@ -241,11 +251,20 @@ class BitcoinNetworkMap:
             }
         )
         
+        # Limit markers to reduce file size
+        if max_markers and len(peers) > max_markers:
+            import random
+            peers_sample = random.sample(peers, max_markers)
+            logger.info(f"⚠️  Limiting to {max_markers} markers (file size optimization). "
+                       f"Total nodes: {len(peers)}")
+        else:
+            peers_sample = peers
+        
         # Count for statistics
         country_counts = Counter()
         city_counts = Counter()
         
-        for peer in peers:
+        for peer in peers_sample:
             ip = peer['ip']
             port = peer['port']
             lat = peer['latitude']
@@ -668,12 +687,18 @@ Environment Variables:
                        help='Disable individual node markers')
     parser.add_argument('--no-stats', action='store_true',
                        help='Disable statistics overlay')
+    parser.add_argument('--max-markers', type=int, default=2000,
+                       help='Maximum number of markers to display (default: 2000). '
+                            'Use 0 for all markers (creates large files!)')
     parser.add_argument('--globe', action='store_true',
                        help='Create 3D globe visualization instead of heatmap')
     parser.add_argument('--all', action='store_true',
                        help='Create both heatmap and 3D globe')
     
     args = parser.parse_args()
+    
+    # Handle max_markers: 0 means all markers (None)
+    max_markers = None if args.max_markers == 0 else args.max_markers
     
     try:
         viz = BitcoinNetworkMap()
@@ -689,7 +714,8 @@ Environment Variables:
                 output_path='bitcoin_network_heatmap.html',
                 theme=args.theme,
                 show_markers=not args.no_markers,
-                show_stats=not args.no_stats
+                show_stats=not args.no_stats,
+                max_markers=max_markers
             )
             viz.create_3d_globe('bitcoin_network_globe.html')
         else:
@@ -697,7 +723,8 @@ Environment Variables:
                 output_path=args.output,
                 theme=args.theme,
                 show_markers=not args.no_markers,
-                show_stats=not args.no_stats
+                show_stats=not args.no_stats,
+                max_markers=max_markers
             )
         
         # Print summary
@@ -711,8 +738,13 @@ Environment Variables:
         print(f"║  Countries represented: {stats['countries']}".ljust(61) + "║")
         print("╠" + "═" * 60 + "╣")
         print(f"║  📁 Output: {args.output}".ljust(61) + "║")
-        print("║  🌐 Open in browser to explore the map!".ljust(61) + "║")
         print("╚" + "═" * 60 + "╝")
+        
+        # Open HTML in browser
+        import webbrowser
+        import os
+        if os.path.exists(args.output):
+            webbrowser.open('file://' + os.path.abspath(args.output))
         
     finally:
         viz.close()
