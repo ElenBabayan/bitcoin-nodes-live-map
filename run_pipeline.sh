@@ -44,12 +44,11 @@ DB_FILE="bitcoin_peers.db"
 
 echo ""
 
-# Step 1: Fetch nodes
+# Step 1: Load nodes from database
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "Step 1/3: Fetching Bitcoin nodes from bitnodes.io..."
+echo "Step 1/3: Loading Bitcoin nodes from database..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-# Use cached data if DB exists, otherwise fetch from API
-$PYTHON fetch_bitnodes.py --db "$DB_FILE" --use-cached
+$PYTHON fetch_bitnodes.py --db "$DB_FILE"
 echo ""
 
 # Step 2: Geolocate
