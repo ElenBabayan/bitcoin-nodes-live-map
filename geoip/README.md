@@ -2,12 +2,23 @@
 
 This directory contains the MaxMind GeoLite2-City database used for IP geolocation.
 
-## Database File
+## Database Files
 
-- **GeoLite2-City.mmdb** (60MB) - MaxMind IP geolocation database
+- **GeoLite2-City.mmdb.gz** (29MB) - Compressed MaxMind IP geolocation database
+  - Automatically decompressed on first run
   - Used to convert IP addresses to geographic coordinates
-  - Already included in this repository
-  - Updated periodically (see below)
+  - Included in this repository (compressed to save space)
+
+- **GeoLite2-City.mmdb** (60MB) - Uncompressed database (auto-generated)
+  - Created automatically when you run the pipeline
+  - Gitignored (too large to commit)
+
+## How It Works
+
+1. The compressed `.gz` file is included in the repository
+2. On first run, the script automatically decompresses it
+3. Subsequent runs use the decompressed `.mmdb` file
+4. **No manual download or setup required!**
 
 ## License
 
@@ -24,11 +35,11 @@ MaxMind releases updated versions of GeoLite2 databases regularly. To update:
    - Sign up for a free account (required)
    - Download GeoLite2-City in MMDB format
 
-2. Replace the existing file:
+2. Compress and replace:
    ```bash
-   cp /path/to/downloaded/GeoLite2-City.mmdb geoip/
+   gzip -9 GeoLite2-City.mmdb
+   mv GeoLite2-City.mmdb.gz geoip/
    ```
 
-Note: The .mmdb file is ignored by git (too large), so you'll need to keep it locally.
 
 
