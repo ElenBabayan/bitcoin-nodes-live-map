@@ -12,52 +12,6 @@ This project creates beautiful visualizations of the global Bitcoin network thro
 2. **📍 Geolocation** - Map IP addresses to coordinates using MaxMind GeoLite2-City
 3. **🗺️ Visualization** - Generate interactive heatmaps with node clusters
 
-Built on the official [bitnodes-crawler](https://github.com/ayeowch/bitnodes) protocol library.
-
-## 🚀 Quick Start
-
-**Choose your approach:**
-- **🅰️ Approach A** - Easiest, instant results, mainnet data (see below)
-- **🅱️ Approach B** - Advanced, custom crawling, testnet (see below)
-
-For most users, start with **Approach A** using the one-command setup:
-
-```bash
-./run_pipeline.sh
-```
-
-For detailed instructions, see [Approach A](#️-approach-a-api-based-simple--fast) or [Approach B](#️-approach-b-custom-crawler-advanced-analytics) sections below.
-
-## 🔧 Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| **Command not found** | Use `python3` and `pip3` instead of `python`/`pip` |
-| **Permission denied** | Run `pip3 install --user -r requirements.txt` |
-| **Redis errors** | Safe to ignore - not needed for Approach A |
-| **Module not found** | Reinstall: `pip3 install -r requirements.txt` |
-| **GeoIP database missing** | Clone bitnodes-crawler: `git clone https://github.com/ayeowch/bitnodes.git bitnodes-crawler` |
-
-## 📊 Network Statistics
-
-The latest crawl discovered:
-
-- **24,000 total nodes** across the Bitcoin network
-- **7,358 IPv4 nodes** successfully geolocated (32%)
-- **15,892 anonymous nodes** (Tor/I2P/CJDNS - cannot be mapped)
-- **98 countries** represented globally
-
-**Top 3 Countries by Node Count:**
-1. 🇺🇸 USA - 2,324 nodes
-2. 🇩🇪 Germany - 972 nodes  
-3. 🇫🇷 France - 451 nodes
-
-## 🔀 Two Approaches
-
-This project offers two distinct methods for visualizing Bitcoin nodes:
-
----
-
 ### 🅰️ Approach A: API-Based (Simple & Fast)
 
 **📁 Location:** Root directory  
@@ -79,7 +33,7 @@ This project offers two distinct methods for visualizing Bitcoin nodes:
 ./run_pipeline.sh
 ```
 
-#### Detailed Installation
+#### (Alternative) Detailed Installation Steps (If you prefer to run manually)
 
 ```bash
 # Step 1: Clone bitnodes-crawler (includes GeoIP databases)
@@ -171,61 +125,6 @@ open bitcoin_network_heatmap.html
 - ✅ **Advanced analytics** - Redis query capabilities
 - ⚠️ **Bitcoin Testnet** - Uses testnet (not mainnet)
 
-#### Manual Execution
-
-```bash
-cd custom_crawler
-
-# Crawl the network
-python3 crawler.py --target 1000 --concurrency 200 --no-delay
-
-# Geolocate discovered peers
-python3 geolocate.py
-
-# Generate visualization
-python3 visualize.py --theme bitcoin
-```
-
-#### Visualization Themes
-
-```bash
-# Bitcoin orange/gold aesthetic
-python3 visualize.py --theme bitcoin
-
-# Cyberpunk purple/pink vibes
-python3 visualize.py --theme cyber
-
-# Neon blue/teal matrix
-python3 visualize.py --theme neon
-```
-
----
-
-**💡 Recommendation:**
-- **First-time users** → Start with **Approach A** for simplicity
-- **Developers/Researchers** → Use **Approach B** for custom crawling
-- **Data analytics** → **Approach B** with Redis query capabilities
-- **Production dashboards** → **Approach A** for reliable mainnet data
-
-## Dependencies
-
-```
-requests>=2.28.0    # For API calls
-folium>=0.14.0      # For map visualization  
-geoip2>=4.8.1       # For MaxMind database
-```
-
-Install all: `pip install -r requirements.txt`
-
-## Heatmap Features
-
-- **🔥 Heatmap layer** - Shows node concentration (red = high, blue = low)
-- **📍 Marker clusters** - Click to expand and see individual nodes
-- **🗺️ Multiple tile layers** - OpenStreetMap, CartoDB dark/light
-- **📊 Statistics panel** - Top countries by node count
-- **ℹ️ Node details** - Click markers for IP, location, ISP info
-- **🔄 Layer control** - Toggle between heatmap and markers
-
 ## Technical Details
 
 ### Bitcoin P2P Protocol
@@ -254,11 +153,12 @@ Out of 24,000 total nodes:
   - ~400 CJDNS nodes
   - These are intentionally anonymous and cannot be mapped
 
-## References
+## 🔧 Troubleshooting
 
-- [bitnodes.io](https://bitnodes.io/) - Bitcoin network crawler
-- [bitnodes-crawler GitHub](https://github.com/ayeowch/bitnodes) - Crawler source code
-- [MaxMind GeoLite2](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data) - Free IP geolocation
-- [Bitcoin P2P Protocol](https://en.bitcoin.it/wiki/Protocol_documentation) - Protocol specification
-- [Folium Documentation](https://python-visualization.github.io/folium/) - Python mapping library
-
+| Issue | Solution |
+|-------|----------|
+| **Command not found** | Use `python3` and `pip3` instead of `python`/`pip` |
+| **Permission denied** | Run `pip3 install --user -r requirements.txt` |
+| **Redis errors** | Safe to ignore - not needed for Approach A |
+| **Module not found** | Reinstall: `pip3 install -r requirements.txt` |
+| **GeoIP database missing** | Clone bitnodes-crawler: `git clone https://github.com/ayeowch/bitnodes.git bitnodes-crawler` |
