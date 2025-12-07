@@ -5,10 +5,12 @@ Requires peers_with_locations.json (created by geolocate_peers.py)
 """
 
 import json
+import os
 import folium
 from folium.plugins import MarkerCluster, HeatMap
 from collections import Counter
 import logging
+from database import PeersDatabase
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -28,19 +30,19 @@ def create_peers_map(peers_data: dict, output_file: str = 'bitcoin_peers_map.htm
     # Filter peers with valid location data
     geolocated_peers = [
         p for p in peers 
-        if p.get('location') and p['location'].get('latitude') and p['location'].get('longitude')
+        if p.get('latitude') and p.get('longitude')
     ]
     
     if not geolocated_peers:
         logger.error("No peers with valid location data found!")
-        logger.info("Please run geolocate_peers.py first to add location data.")
+        logger.info("Please run geolocate_maxmind.py first to add location data.")
         return
     
     logger.info(f"Creating map with {len(geolocated_peers)} geolocated peers...")
     
     # Calculate center point (average of all locations)
-    lats = [p['location']['latitude'] for p in geolocated_peers]
-    lons = [p['location']['longitude'] for p in geolocated_peers]
+    lats = [p['latitude'] for p in geolocated_peers]
+    lons = [p['longitude'] for p in geolocated_peers]
     center_lat = sum(lats) / len(lats)
     center_lon = sum(lons) / len(lons)
     
@@ -58,8 +60,8 @@ def create_peers_map(peers_data: dict, output_file: str = 'bitcoin_peers_map.htm
     # Prepare heatmap data
     heat_data = []
     for peer in geolocated_peers:
-        lat = peer['location']['latitude']
-        lon = peer['location']['longitude']
+        lat = peer['latitude']
+        lon = peer['longitude']
         heat_data.append([lat, lon])
     
     # Add heatmap layer if enabled
@@ -86,17 +88,16 @@ def create_peers_map(peers_data: dict, output_file: str = 'bitcoin_peers_map.htm
     for peer in geolocated_peers:
         ip = peer.get('ip', 'Unknown')
         port = peer.get('port', 'Unknown')
-        location = peer['location']
         
-        lat = location['latitude']
-        lon = location['longitude']
-        country = location.get('country', 'Unknown')
-        city = location.get('city', 'Unknown')
-        region = location.get('region', 'Unknown')
-        isp = location.get('isp', 'Unknown')
+        lat = peer['latitude']
+        lon = peer['longitude']
+        country = peer.get('country', 'Unknown')
+        city = peer.get('city', 'Unknown')
+        asn = peer.get('asn', 'Unknown')
+        asn_org = peer.get('asn_org', 'Unknown')
         
         country_counts[country] += 1
-        if city != 'Unknown':
+        if city and city != 'Unknown':
             city_counts[f"{city}, {country}"] += 1
         
         # Create popup content
@@ -108,9 +109,10 @@ def create_peers_map(peers_data: dict, output_file: str = 'bitcoin_peers_map.htm
             <p style="margin: 5px 0;"><strong>Address:</strong> {ip}:{port}</p>
             <hr style="margin: 10px 0;">
             <p style="margin: 5px 0;"><strong>Location:</strong></p>
-            <p style="margin: 5px 0;">{city}, {region}</p>
+            <p style="margin: 5px 0;">{city}</p>
             <p style="margin: 5px 0;">{country}</p>
-            <p style="margin: 5px 0;"><strong>ISP:</strong> {isp}</p>
+            <p style="margin: 5px 0;"><strong>ASN:</strong> {asn}</p>
+            <p style="margin: 5px 0;"><strong>ISP:</strong> {asn_org}</p>
         </div>
         """
         
@@ -157,7 +159,7 @@ def create_peers_map(peers_data: dict, output_file: str = 'bitcoin_peers_map.htm
     
     # Print statistics
     print(f"\n{'='*60}")
-    print(f"Map Visualization Complete!")
+    print(f"✅ Map Visualization Complete!")
     print(f"Total geolocated peers: {len(geolocated_peers)}")
     print(f"Countries represented: {len(country_counts)}")
     print(f"\nTop 10 Countries:")
@@ -181,6 +183,9 @@ Examples:
   
   # Use custom input file:
   python3 visualize_peers_map.py --input my_peers.json --output my_map.html
+  
+  # Use database:
+  python3 visualize_peers_map.py --db bitcoin_peers.db --use-db
         """
     )
     
@@ -188,25 +193,44 @@ Examples:
                        help='Input file with geolocated peers (default: peers_with_locations.json)')
     parser.add_argument('--output', type=str, default='bitcoin_peers_map.html',
                        help='Output HTML map file (default: bitcoin_peers_map.html)')
+    parser.add_argument('--db', type=str, default='bitcoin_peers.db',
+                       help='SQLite database file (default: bitcoin_peers.db)')
+    parser.add_argument('--use-db', action='store_true',
+                       help='Read from SQLite database instead of JSON')
     parser.add_argument('--no-heatmap', action='store_true',
                        help='Disable heatmap layer (default: heatmap enabled)')
     
     args = parser.parse_args()
     
-    # Load peers data
-    try:
-        with open(args.input, 'r') as f:
-            peers_data = json.load(f)
+    # Load peers data from database or JSON
+    if args.use_db or (not os.path.exists(args.input) and os.path.exists(args.db)):
+        # Use database
+        logger.info(f"Reading from database: {args.db}")
+        peers_db = PeersDatabase(args.db)
+        peers_data = peers_db.get_latest_snapshot()
         
-        logger.info(f"Loaded peers data from {args.input}")
+        if not peers_data:
+            logger.error("No data found in database")
+            logger.info("Please run fetch_bitnodes.py first to fetch nodes")
+            return
         
-    except FileNotFoundError:
-        logger.error(f"File not found: {args.input}")
-        logger.info("Please run geolocate_peers.py first to create peers_with_locations.json")
-        return
-    except json.JSONDecodeError as e:
-        logger.error(f"Invalid JSON in {args.input}: {e}")
-        return
+        logger.info(f"Loaded peers data from database")
+        
+    else:
+        # Load from JSON file
+        try:
+            with open(args.input, 'r') as f:
+                peers_data = json.load(f)
+            
+            logger.info(f"Loaded peers data from {args.input}")
+            
+        except FileNotFoundError:
+            logger.error(f"File not found: {args.input}")
+            logger.info("Please run geolocate_maxmind.py first to create peers_with_locations.json")
+            return
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in {args.input}: {e}")
+            return
     
     # Create map
     create_peers_map(peers_data, args.output, enable_heatmap=not args.no_heatmap)

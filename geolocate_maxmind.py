@@ -11,6 +11,7 @@ import os
 import sys
 import logging
 from typing import Dict, List, Optional
+from database import PeersDatabase
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -64,15 +65,30 @@ class MaxMindGeolocator:
         try:
             response = self.reader.city(ip)
             
+            # Also get ASN info if available
+            asn_info = {}
+            try:
+                asn_db_path = os.path.join(os.path.dirname(self.reader._db_reader._filename), 
+                                          'GeoLite2-ASN.mmdb')
+                if os.path.exists(asn_db_path):
+                    asn_reader = geoip2.database.Reader(asn_db_path)
+                    asn_response = asn_reader.asn(ip)
+                    asn_info = {
+                        'asn': f"AS{asn_response.autonomous_system_number}",
+                        'asn_org': asn_response.autonomous_system_organization
+                    }
+                    asn_reader.close()
+            except:
+                pass
+            
             return {
                 'latitude': response.location.latitude,
                 'longitude': response.location.longitude,
                 'country': response.country.name,
-                'countryCode': response.country.iso_code,
-                'region': response.subdivisions.most_specific.name if response.subdivisions else None,
+                'country_code': response.country.iso_code,
                 'city': response.city.name,
-                'isp': None,  # Not available in City database
-                'timezone': response.location.time_zone
+                'timezone': response.location.time_zone,
+                **asn_info
             }
         except AddressNotFoundError:
             return None
@@ -80,45 +96,46 @@ class MaxMindGeolocator:
             logger.debug(f"Error geolocating {ip}: {e}")
             return None
     
-    def geolocate_all_peers(self, peers: List[Dict], output_file: str = None) -> List[Dict]:
+    def geolocate_all_peers(self, peers: List[Dict]) -> List[Dict]:
         """
         Geolocate all peers using local database (INSTANT!).
         
         Args:
             peers: List of peer dictionaries with 'ip' field
-            output_file: Optional file to save progress
             
         Returns:
-            List of peers with added location data
+            List of peers with updated location data
         """
         total = len(peers)
-        geolocated_peers = []
         geolocated_count = 0
         
         logger.info(f"Geolocating {total} peers using MaxMind database...")
         
         for idx, peer in enumerate(peers, 1):
             ip = peer.get('ip')
-            peer_copy = peer.copy()
             
             if ip:
                 location = self.geolocate_ip(ip)
                 if location and location.get('latitude') and location.get('longitude'):
-                    peer_copy['location'] = location
+                    # Update peer with location data directly
+                    peer.update({
+                        'latitude': location['latitude'],
+                        'longitude': location['longitude'],
+                        'country': location.get('country'),
+                        'country_code': location.get('country_code'),
+                        'city': location.get('city'),
+                        'timezone': location.get('timezone'),
+                        'asn': location.get('asn'),
+                        'asn_org': location.get('asn_org')
+                    })
                     geolocated_count += 1
-                else:
-                    peer_copy['location'] = None
-            else:
-                peer_copy['location'] = None
-            
-            geolocated_peers.append(peer_copy)
             
             # Progress every 1000
             if idx % 1000 == 0:
                 logger.info(f"Progress: {idx}/{total} ({idx*100//total}%) - Geolocated: {geolocated_count}")
         
         logger.info(f"Geolocation complete! {geolocated_count}/{total} peers geolocated")
-        return geolocated_peers
+        return peers
     
     def close(self):
         """Close the database reader."""
@@ -140,6 +157,7 @@ The database is included in geoip/GeoLite2-City.mmdb
 
 Examples:
   python3 geolocate_maxmind.py --input peers.json --output peers_with_locations.json
+  python3 geolocate_maxmind.py --db bitcoin_peers.db  # Use database directly
         """
     )
     
@@ -147,44 +165,69 @@ Examples:
                        help='Input peers.json file (default: peers.json)')
     parser.add_argument('--output', type=str, default='peers_with_locations.json',
                        help='Output file with location data (default: peers_with_locations.json)')
-    parser.add_argument('--db', type=str, default=None,
+    parser.add_argument('--db', type=str, default='bitcoin_peers.db',
+                       help='SQLite database file (default: bitcoin_peers.db)')
+    parser.add_argument('--geoip-db', type=str, default=None,
                        help='Path to GeoLite2-City.mmdb (default: geoip/GeoLite2-City.mmdb)')
+    parser.add_argument('--use-db', action='store_true',
+                       help='Read from and write to SQLite database instead of JSON')
+    parser.add_argument('--no-json', action='store_true',
+                       help='Skip saving to JSON file')
     
     args = parser.parse_args()
     
-    # Load peers
+    # Initialize geolocator
     try:
-        with open(args.input, 'r') as f:
-            data = json.load(f)
-        
-        if isinstance(data, dict) and 'peers' in data:
-            peers = data['peers']
-            original_metadata = {k: v for k, v in data.items() if k != 'peers'}
-        else:
-            peers = data if isinstance(data, list) else []
-            original_metadata = {}
-        
-        logger.info(f"Loaded {len(peers)} peers from {args.input}")
-        
-    except FileNotFoundError:
-        logger.error(f"File not found: {args.input}")
-        return 1
-    except json.JSONDecodeError as e:
-        logger.error(f"Invalid JSON in {args.input}: {e}")
-        return 1
-    
-    # Geolocate
-    try:
-        geolocator = MaxMindGeolocator(db_path=args.db)
+        geolocator = MaxMindGeolocator(db_path=args.geoip_db)
     except (ImportError, FileNotFoundError) as e:
         logger.error(str(e))
         return 1
     
-    geolocated_peers = geolocator.geolocate_all_peers(peers, args.output)
+    # Load peers from database or JSON
+    if args.use_db or (not os.path.exists(args.input) and os.path.exists(args.db)):
+        # Use database
+        logger.info(f"Reading from database: {args.db}")
+        peers_db = PeersDatabase(args.db)
+        data = peers_db.get_latest_snapshot()
+        
+        if not data:
+            logger.error("No data found in database")
+            return 1
+        
+        peers = data['peers']
+        original_metadata = {k: v for k, v in data.items() if k != 'peers'}
+        logger.info(f"Loaded {len(peers)} peers from database")
+        
+    else:
+        # Use JSON file
+        try:
+            with open(args.input, 'r') as f:
+                data = json.load(f)
+            
+            if isinstance(data, dict) and 'peers' in data:
+                peers = data['peers']
+                original_metadata = {k: v for k, v in data.items() if k != 'peers'}
+            else:
+                peers = data if isinstance(data, list) else []
+                original_metadata = {}
+            
+            logger.info(f"Loaded {len(peers)} peers from {args.input}")
+            
+        except FileNotFoundError:
+            logger.error(f"File not found: {args.input}")
+            return 1
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in {args.input}: {e}")
+            return 1
+    
+    # Geolocate all peers (modifies in place)
+    geolocated_peers = geolocator.geolocate_all_peers(peers)
     geolocator.close()
     
-    # Save results
-    geolocated_count = sum(1 for p in geolocated_peers if p.get('location'))
+    # Count geolocated peers
+    geolocated_count = sum(1 for p in geolocated_peers 
+                          if p.get('latitude') and p.get('longitude'))
+    
     output_data = {
         **original_metadata,
         'peers': geolocated_peers,
@@ -195,16 +238,28 @@ Examples:
         }
     }
     
-    with open(args.output, 'w') as f:
-        json.dump(output_data, f, indent=2)
+    # Save to database
+    if args.use_db:
+        peers_db = PeersDatabase(args.db)
+        snapshot_id = peers_db.save_snapshot(output_data)
+        logger.info(f"Saved geolocated data to database as snapshot {snapshot_id}")
+    
+    # Save to JSON (unless --no-json)
+    if not args.no_json:
+        with open(args.output, 'w') as f:
+            json.dump(output_data, f, indent=2)
+        logger.info(f"Saved geolocated data to {args.output}")
     
     stats = output_data['geolocation_stats']
     print(f"\n{'='*60}")
-    print(f"MaxMind geolocation complete!")
+    print(f"✅ MaxMind geolocation complete!")
     print(f"Total peers: {stats['total_peers']}")
     print(f"Successfully geolocated: {stats['geolocated']}")
     print(f"Failed (private/invalid IPs): {stats['failed']}")
-    print(f"Results saved to {args.output}")
+    if args.use_db:
+        print(f"Database: {args.db}")
+    if not args.no_json:
+        print(f"JSON file: {args.output}")
     print(f"{'='*60}")
     
     return 0

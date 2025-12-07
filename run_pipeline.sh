@@ -2,6 +2,7 @@
 #
 # Bitcoin Nodes Live Map - Full Pipeline Runner
 # Runs all steps: fetch nodes, geolocate, visualize
+# Now uses SQLite database for efficient storage!
 #
 
 set -e  # Exit on error
@@ -38,27 +39,31 @@ else
 fi
 echo ""
 
+# Database file
+DB_FILE="bitcoin_peers.db"
+
 echo ""
 
 # Step 1: Fetch nodes
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "Step 1/3: Fetching Bitcoin nodes from bitnodes.io..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-$PYTHON fetch_bitnodes.py --output peers.json
+# Use cached data if DB exists, otherwise fetch from API
+$PYTHON fetch_bitnodes.py --db "$DB_FILE" --use-cached
 echo ""
 
 # Step 2: Geolocate
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "Step 2/3: Geolocating nodes using MaxMind database..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-$PYTHON geolocate_maxmind.py --input peers.json --output peers_with_locations.json
+$PYTHON geolocate_maxmind.py --db "$DB_FILE" --use-db --no-json
 echo ""
 
 # Step 3: Visualize
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "Step 3/3: Creating heatmap visualization..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-$PYTHON visualize_peers_map.py --input peers_with_locations.json --output bitcoin_peers_map.html
+$PYTHON visualize_peers_map.py --db "$DB_FILE" --use-db
 echo ""
 
 # Done
@@ -67,9 +72,12 @@ echo "║                    ✅ COMPLETE!                            ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo ""
 echo "📊 Results:"
-echo "   • peers.json                  - Raw node data"
-echo "   • peers_with_locations.json   - Geolocated nodes"
-echo "   • bitcoin_peers_map.html      - Interactive heatmap"
+echo "   • $DB_FILE                   - SQLite database (can be committed!)"
+echo "   • bitcoin_peers_map.html     - Interactive heatmap"
+echo ""
+echo "💡 Database commands:"
+echo "   • python3 database.py --db $DB_FILE --stats   # Show statistics"
+echo "   • python3 database.py --db $DB_FILE --list    # List snapshots"
 echo ""
 echo "🌐 Opening map in browser..."
 
