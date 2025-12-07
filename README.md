@@ -2,6 +2,8 @@
 
 Interactive heatmap visualization of Bitcoin nodes worldwide, showing the real-time geographic distribution of the Bitcoin network.
 
+**Deployment:** https://seto-y.github.io/blockchain_project/
+
 ![Bitcoin Network Heatmap](https://img.shields.io/badge/Nodes-7,358-blue) ![Countries](https://img.shields.io/badge/Countries-98-green) ![Total Network](https://img.shields.io/badge/Total%20Network-24,000-orange)
 
 ## 📖 Overview
