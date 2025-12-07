@@ -77,12 +77,6 @@ This project offers two distinct methods for visualizing Bitcoin nodes:
 ```bash
 # Automated (recommended)
 ./run_pipeline.sh
-
-# Manual steps
-python3 fetch_bitnodes.py --output peers.json
-python3 geolocate_maxmind.py --input peers.json --output peers_with_locations.json
-python3 visualize_peers_map.py --input peers_with_locations.json
-open bitcoin_peers_map.html
 ```
 
 #### Detailed Installation
